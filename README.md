@@ -1,32 +1,25 @@
-# 🌐 HumbleOp
+# HumbleOp
 
-**HumbleOp** is a social debate platform where every opinion matters — but only once.  
-Users share an opinion, others respond with a single reply, and the top-voted reply earns the right to duel with the author. One conversation. One chance. One winner.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Built with: Python & Flask](https://img.shields.io/badge/built%20with-Flask%20%7C%20Python-blue)](#)
+![Status: Private](https://img.shields.io/badge/repo-private-red)
 
----
-
-## 🧠 Concept
-
-- 🗣️ A user posts a single opinion (e.g. "Universities should be free.")
-- 💬 Others reply — but can submit **only one** response per post.
-- 🗳️ The community votes on the best reply.
-- ⚔️ The top-voted responder enters a timed **1-on-1 debate** with the post author.
-- 🚩 If the discussion becomes toxic, red flags can be raised (40% threshold).
-- 🔁 If the top user is flagged out or inactive, the next-highest voted user takes their place.
+**HumbleOp** is a minimal social discussion platform where opinions are challenged fairly, transparently, and intelligently.  
+The community votes on responses, and the most voted user earns the right to debate the original author — 1-on-1.
 
 ---
 
-## 🧪 MVP Features (Current)
+## ✨ Core Features
 
-- 🔹 Flask + APScheduler backend
-- 🔹 In-memory post & duel management
-- 🔹 Duel timeout with 1 optional postponement
-- 🔹 Automatic switch to second-best reply
-- 🔹 API endpoints for posting, starting, and checking status
+- 🗳️ **Voting system** to select the top responses  
+- 🏆 **Duel mechanic** between post author and top-voted responder  
+- ⏱️ **Timers** and auto-switch if the winner is inactive  
+- 🚩 (Coming soon) **Flag system** to moderate toxic conversations  
+- 📦 API-based architecture, built in Flask (no frontend yet)
 
 ---
 
-## 🚀 How to Run (Locally)
+## 🚀 How to Run
 
 1. Clone the repository:
    ```bash
@@ -34,31 +27,31 @@ Users share an opinion, others respond with a single reply, and the top-voted re
    cd HumbleOp
 
 
-(Recommended) Create a virtual environment:
+Create a virtual environment:
 python -m venv venv
-.\venv\Scripts\activate   # Windows
+.\venv\Scripts\activate   # On Windows
+
 
 Install dependencies:
 pip install -r requirements.txt
 
 
-Run the server:
+Run the app:
 python HumbleCore.py
 
 
-Optional: Run the demo test script
-python test_humbleop.py
+📡 API Endpoints
+
+| Method | Endpoint                | Description                              |
+|--------|-------------------------|------------------------------------------|
+| POST   | `/start_duel/<post_id>` | Start a duel for a post                  |
+| POST   | `/start_now/<post_id>`  | Mark the duel as started by the winner   |
+| GET    | `/status/<post_id>`     | Check current state of a post            |
+| POST   | `/vote/<post_id>`       | Vote for a candidate on a post           |
+| GET    | `/results/<post_id>`    | See ranking and vote count for a post    |
+
+📜 License
+This project is licensed under the MIT License.
 
 
-
-API Endpoints
-Method	URL	Description
-POST	/start_duel/<post_id>	Creates a new opinion & assigns duel
-POST	/start_now/<post_id>	Simulates user starting the duel
-GET	/status/<post_id>	Returns current duel state
-
-
-
-Contact
-Created by @HumbleOp
-Got feedback or want to collaborate? Open an issue or email us at fra.cossu.chem@gmail.com
+Made with 💡 and Python. Private MVP for internal testing.
