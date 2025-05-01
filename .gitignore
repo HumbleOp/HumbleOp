@@ -1,0 +1,15 @@
+# Ignore system/user folders accidentally tracked
+/3D Objects/
+/AppData/
+/Contacts/
+/Downloads/
+/Favorites/
+/Links/
+/Music/
+/NTUSER.*
+/Saved Games/
+/Searches/
+/Videos/
+/venv/
+/*.ini
+*.dat
