@@ -55,3 +55,23 @@ This project is licensed under the MIT License.
 
 
 Made with 💡 and Python. Private MVP for internal testing.
+
+
+---
+
+## 🛣️ Roadmap
+
+- [x] Set up Flask backend
+- [x] Implement duel timer with fallback to second-ranked user
+- [x] Add voting system with one-vote-per-user logic
+- [x] Auto-assign winner and second based on votes
+- [x] Clean repository and remove old commits
+- [x] Write full project README with badges
+- [ ] Add flag system to moderate or interrupt duels
+- [ ] Add persistent data storage (JSON or SQLite)
+- [ ] Implement user identity (basic token or session)
+- [ ] RESTful login/signup with authentication
+- [ ] Create frontend prototype (React or Vite)
+- [ ] Deploy demo online (Render, Vercel, Railway, etc.)
+
+> ✅ This list evolves with the project. Feature status is updated with each commit.
