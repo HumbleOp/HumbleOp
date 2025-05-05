@@ -1,4 +1,18 @@
-# Ignore system/user folders accidentally tracked
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env
+.venv/
+
+# Flask debug DB / session files
+*.db
+*.sqlite3
+
+# System/user folders accidentally tracked
 /3D Objects/
 /AppData/
 /Contacts/
@@ -6,10 +20,28 @@
 /Favorites/
 /Links/
 /Music/
-/NTUSER.*
 /Saved Games/
 /Searches/
 /Videos/
-/venv/
-/*.ini
-*.dat
+/NTUSER.*
+
+# Config / IDE
+*.ini
+*.cfg
+*.env
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs, reports, caches
+*.log
+*.cache
+pytest_cache/
+.coverage
+
+# Persistence files
+users.json
+data.json
