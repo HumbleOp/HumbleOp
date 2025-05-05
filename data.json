@@ -1,0 +1,123 @@
+{
+  "post123": {
+    "winner": "bob",
+    "second": "bob",
+    "postponed": false,
+    "started": false,
+    "votes": {
+      "alice": 6,
+      "bob": 3
+    },
+    "voted_users": [
+      "user1",
+      "user2",
+      "user3",
+      "user4",
+      "user5",
+      "user6",
+      "user8",
+      "user9",
+      "user10"
+    ],
+    "flags": []
+  },
+  "post1": {
+    "author": "Jack",
+    "body": "Is AI helping or hurting society?",
+    "comments": {
+      "alice": "I think AI accelerates progress.",
+      "bob": "It also brings significant risks.",
+      "carol": "Depends on how we govern it."
+    },
+    "commenters": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "votes": {
+      "alice": 5,
+      "bob": 3,
+      "carol": 1
+    },
+    "voted_users": [
+      "user1",
+      "user2",
+      "user3",
+      "user4",
+      "user5",
+      "user6",
+      "user7",
+      "user8",
+      "user9"
+    ],
+    "flags": [],
+    "likes": [
+      "user5"
+    ],
+    "winner": "bob",
+    "second": "bob",
+    "postponed": false,
+    "started": false
+  },
+  "postX": {
+    "winner": "alice",
+    "second": "bob",
+    "postponed": false,
+    "started": false,
+    "votes": {
+      "alice": 3,
+      "bob": 2,
+      "maggie": 1
+    },
+    "voted_users": [
+      "v1",
+      "v2",
+      "v3",
+      "v4",
+      "v5",
+      "v6"
+    ],
+    "flags": [],
+    "comments": {
+      "alex": "Alex\u2019 take",
+      "alice": "Alice\u2019 take",
+      "bob": "Bob\u2019 take",
+      "freddie": "Freddie\u2019 take",
+      "maggie": "Maggie\u2019 take"
+    },
+    "commenters": [
+      "alex",
+      "alice",
+      "bob",
+      "freddie",
+      "maggie"
+    ]
+  },
+  "post200": {
+    "body": "Is AI helping or hurting society?",
+    "winner": "bob",
+    "second": "bob",
+    "postponed": false,
+    "started": false,
+    "votes": {
+      "alice": 2,
+      "bob": 1
+    },
+    "voted_users": [
+      "user1",
+      "user2",
+      "user3"
+    ],
+    "flags": [],
+    "comments": {
+      "alice": "I think AI accelerates progress.",
+      "bob": "It also brings risks we must manage.",
+      "carol": "Depends on how we govern it."
+    },
+    "commenters": [
+      "alice",
+      "bob",
+      "carol"
+    ]
+  }
+}
