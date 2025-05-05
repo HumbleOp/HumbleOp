@@ -1,16 +1,31 @@
 import json
 import os
-from flask import Flask, request, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
+import uuid
 from datetime import datetime, timedelta
+from functools import wraps
 
+from flask import Flask, request, jsonify, g
+from werkzeug.security import generate_password_hash, check_password_hash
+from apscheduler.schedulers.background import BackgroundScheduler
+
+# --- Users persistence --------------------------------
+USERS_FILE = "users.json"
+if os.path.exists(USERS_FILE):
+    with open(USERS_FILE, "r") as f:
+        users = json.load(f)
+else:
+    users = {}
+
+def save_users():
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2)
+
+# --- Flask & Scheduler setup --------------------------
 app = Flask(__name__)
 scheduler = BackgroundScheduler()
 scheduler.start()
 
 DATA_FILE = "data.json"
-
-# Load data from JSON file (if exists)
 if os.path.exists(DATA_FILE):
     with open(DATA_FILE, "r") as f:
         posts = json.load(f)
@@ -18,13 +33,28 @@ else:
     posts = {}
 
 def save_data():
-    """Save the in-memory posts dict to disk."""
     with open(DATA_FILE, "w") as f:
         json.dump(posts, f, indent=2)
     print("[DATA SAVED]")
 
+# --- Auth decorator ----------------------------------
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get("Authorization", "")
+        parts = auth.split()
+        if len(parts) != 2 or parts[0] != "Bearer":
+            return jsonify({"error": "authorization required"}), 401
+        token = parts[1]
+        for uname, u in users.items():
+            if u.get("token") == token:
+                g.current_user = uname
+                return f(*args, **kwargs)
+        return jsonify({"error": "invalid token"}), 401
+    return decorated
+
+# --- Duel timeout handler ----------------------------
 def handle_duel_timeout(post_id):
-    """Handle duel timeout: postpone once, then switch to second."""
     post = posts.get(post_id)
     if not post or post.get("started"):
         return
@@ -50,47 +80,76 @@ def handle_duel_timeout(post_id):
 
     save_data()
 
-@app.route("/create_post/<post_id>", methods=["POST"])
-def create_post(post_id):
-    data   = request.json
-    author = data.get("author")
-    body   = data.get("body")
+# --- Auth endpoints ---------------------------------
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+    if not username or not password:
+        return jsonify({"error": "username and password required"}), 400
+    if username in users:
+        return jsonify({"error": "username already exists"}), 409
 
-    if not author or not body:
-        return jsonify({"error": "Fields 'author' and 'body' are required."}), 400
+    users[username] = {
+        "password_hash": generate_password_hash(password),
+        "token": None
+    }
+    save_users()
+    return jsonify({"status": "user registered"}), 201
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+    user = users.get(username)
+    if not user or not check_password_hash(user["password_hash"], password):
+        return jsonify({"error": "invalid credentials"}), 401
+
+    token = uuid.uuid4().hex
+    user["token"] = token
+    save_users()
+    return jsonify({"token": token}), 200
+
+# --- Post creation & duel endpoints -----------------
+@app.route("/create_post/<post_id>", methods=["POST"])
+@login_required
+def create_post(post_id):
+    body = request.json.get("body")
+    author = g.current_user
+    if not body:
+        return jsonify({"error": "Field 'body' is required."}), 400
 
     posts[post_id] = {
         "author": author,
-        "body":   body,
-        "comments": {},      # commenter -> text
-        "commenters": [],    # who has già commentato
-        "votes": {},         # votes per commenter
-        "voted_users": [],   # chi ha già votato
-        "flags": [],         # flag sul vincitore
-        "likes": []          # like sul vincitore
-        # winner/second saranno calcolati solo quando serve
+        "body": body,
+        "comments": {},
+        "commenters": [],
+        "votes": {},
+        "voted_users": [],
+        "flags": [],
+        "likes": []
     }
     save_data()
     return jsonify({"status": "Post created."}), 200
 
 @app.route("/start_duel/<post_id>", methods=["POST"])
+@login_required
 def start_duel(post_id):
     post = posts.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
 
-    # devo avere almeno 1 commento per poter votare
     if len(post["commenters"]) < 1:
         return jsonify({"error": "Not enough comments to start duel."}), 400
 
-    # calcolo winner e second in base ai voti
     ranking = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
     winner = ranking[0][0]
     second = ranking[1][0] if len(ranking) > 1 else None
 
-    # salvo e schedule
-    post["winner"] = winner
-    post["second"] = second
+    post["winner"]    = winner
+    post["second"]    = second
     post["postponed"] = False
     post["started"]   = False
 
@@ -108,8 +167,8 @@ def start_duel(post_id):
     }), 200
 
 @app.route("/start_now/<post_id>", methods=["POST"])
+@login_required
 def user_started(post_id):
-    """Manually mark the duel as started by the winner."""
     post = posts.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
@@ -117,18 +176,17 @@ def user_started(post_id):
     save_data()
     return jsonify({"status": "Duel started."}), 200
 
+# --- Comment & vote endpoints -----------------------
 @app.route("/comment/<post_id>", methods=["POST"])
+@login_required
 def add_comment(post_id):
-    """Add a comment under a post (one comment per user)."""
-    data = request.json
-    commenter = data.get("commenter")
-    text = data.get("text")
     post = posts.get(post_id)
-
+    commenter = g.current_user
+    text = request.json.get("text")
     if not post:
         return jsonify({"error": "Post not found."}), 404
-    if not commenter or not text:
-        return jsonify({"error": "Both 'commenter' and 'text' are required."}), 400
+    if not text:
+        return jsonify({"error": "Field 'text' is required."}), 400
     if commenter in post["commenters"]:
         return jsonify({"error": f"User '{commenter}' has already commented."}), 403
 
@@ -141,8 +199,8 @@ def add_comment(post_id):
     }), 200
 
 @app.route("/comments/<post_id>", methods=["GET"])
+@login_required
 def get_comments(post_id):
-    """List all comments for a post, with current vote counts."""
     post = posts.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
@@ -157,16 +215,13 @@ def get_comments(post_id):
     return jsonify({"comments": comments}), 200
 
 @app.route("/vote/<post_id>", methods=["POST"])
+@login_required
 def vote(post_id):
-    """Vote for a specific comment on a post; one vote per user."""
-    data = request.json
-    voter = data.get("voter")
-    candidate = data.get("candidate")
-
     post = posts.get(post_id)
+    voter = g.current_user
+    candidate = request.json.get("candidate")
     if not post:
         return jsonify({"error": "Post not found."}), 404
-
     if candidate not in post["commenters"]:
         return jsonify({"error": f"Candidate '{candidate}' has not commented."}), 400
     if voter in post["voted_users"]:
@@ -176,7 +231,7 @@ def vote(post_id):
     post["voted_users"].append(voter)
 
     sorted_votes = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
-    post["winner"] = sorted_votes[0][0] if sorted_votes else None
+    post["winner"] = sorted_votes[0][0]
     post["second"] = sorted_votes[1][0] if len(sorted_votes) > 1 else None
 
     save_data()
@@ -185,17 +240,13 @@ def vote(post_id):
         "votes": post["votes"]
     }), 200
 
+# --- Flag & like endpoints -------------------------
 @app.route("/flag/<post_id>", methods=["POST"])
+@login_required
 def flag_post(post_id):
-    """
-    Flag the current duel winner.
-    Flags can be offset by likes 1:1.
-    If net flags ≥ 40% of the winner’s original likes, switch to second place.
-    """
-    data = request.json
-    flagger = data.get("user")
+    data = request.json or {}
+    flagger = g.current_user
     post = posts.get(post_id)
-
     if not post:
         return jsonify({"error": "Post not found."}), 404
 
@@ -203,38 +254,29 @@ def flag_post(post_id):
     if not winner:
         return jsonify({"error": "No winner to flag."}), 400
 
-    # initialize flags and likes lists if missing
     post.setdefault("flags", [])
     post.setdefault("likes", [])
 
-    # only one flag per user
     if flagger in post["flags"]:
         return jsonify({"error": f"User '{flagger}' has already flagged the winner."}), 403
 
-    # register the flag
     post["flags"].append(flagger)
 
-    # compute counts
     winner_votes = post["votes"].get(winner, 0)
     flag_count   = len(post["flags"])
     like_count   = len(post["likes"])
     net_flags    = max(0, flag_count - like_count)
+    flag_ratio   = (net_flags / winner_votes) if winner_votes > 0 else 0
 
-    # compute ratio based on original votes
-    flag_ratio = (net_flags / winner_votes) if winner_votes > 0 else 0
-
-    # if net flags ≥ 40% of winner’s votes, interrupt and switch
     if flag_ratio >= 0.4:
         post["started"] = False
         second = post.get("second")
-
         if second:
             post["winner"] = second
             result = {
                 "status": "Duel interrupted due to net flags on winner.",
                 "switched_to": second
             }
-            # schedule new timer for the next winner
             scheduler.add_job(
                 handle_duel_timeout,
                 'date',
@@ -247,7 +289,6 @@ def flag_post(post_id):
                 "switched_to": None
             }
 
-        # reset flags and likes for the next round
         post["flags"] = []
         post["likes"] = []
         post["postponed"] = False
@@ -259,18 +300,12 @@ def flag_post(post_id):
         "status": f"Flag registered on '{winner}'. Net flags: {net_flags}/{winner_votes}."
     }), 200
 
-
-
 @app.route("/like/<post_id>", methods=["POST"])
+@login_required
 def like_post(post_id):
-    """
-    Register a ‘like’ for the current duel winner.
-    Likes can offset flags 1:1.
-    """
-    data = request.json
-    liker = data.get("user")
+    data = request.json or {}
+    liker = g.current_user
     post = posts.get(post_id)
-
     if not post:
         return jsonify({"error": "Post not found."}), 404
 
@@ -278,10 +313,7 @@ def like_post(post_id):
     if not winner:
         return jsonify({"error": "No winner to like."}), 400
 
-    # init likes list if missing
-    if "likes" not in post:
-        post["likes"] = []
-
+    post.setdefault("likes", [])
     if liker in post["likes"]:
         return jsonify({"error": f"User '{liker}' has already liked the winner."}), 403
 
@@ -291,33 +323,19 @@ def like_post(post_id):
         "status": f"Like registered on '{winner}'. Total likes: {len(post['likes'])}"
     }), 200
 
-
+# --- Read endpoints --------------------------------
 @app.route("/status/<post_id>", methods=["GET"])
 def get_status(post_id):
-    """Return full post state including body, comments, votes, flags, winner, second."""
     post = posts.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
-    return jsonify({
-        "body": post["body"],
-        "winner": post["winner"],
-        "second": post["second"],
-        "postponed": post["postponed"],
-        "started": post["started"],
-        "votes": post["votes"],
-        "voted_users": post["voted_users"],
-        "flags": post["flags"],
-        "comments": post["comments"],
-        "commenters": post["commenters"]
-    }), 200
+    return jsonify(post), 200
 
 @app.route("/results/<post_id>", methods=["GET"])
 def get_results(post_id):
-    """Return vote ranking, top two commenters, and post body for a post."""
     post = posts.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
-
     ranking = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
     return jsonify({
         "body": post["body"],
@@ -326,6 +344,7 @@ def get_results(post_id):
         "second": post.get("second")
     }), 200
 
+# --- App runner -----------------------------------
 if __name__ == "__main__":
     print(app.url_map)
     app.run(debug=True)
