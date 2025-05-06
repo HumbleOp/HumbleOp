@@ -101,3 +101,5 @@ Week 8 – ORM cleanup & Tests
 [x] test_database.py per verifica schema
 
 [ ] Pytest suite per endpoint (auth, CRUD, duel logic)
+
+<!-- bump for push -->
