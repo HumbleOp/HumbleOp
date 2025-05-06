@@ -1,19 +1,23 @@
 {
   "bob": {
     "password_hash": "$argon2id$v=19$m=51200,t=2,p=8$WXAWdKcP8sK6sOhk4ep50A$qUnLvExTInG63Hk8feUax3XWX4xOVYKZK9MLay7YlEs",
-    "token": "1a3bd35b49864bacb1efc2b575f40401",
+    "token": "c048ba53083442f68c625d456dc3c5a1",
     "avatar_url": "",
     "bio": "",
-    "badges": [],
+    "badges": [
+      "First blood"
+    ],
     "following": [],
     "followers": []
   },
   "alice": {
     "password_hash": "$argon2id$v=19$m=51200,t=2,p=8$igIeBW3E0i5u/JPhkYD+Jw$x2vBpUv+BR/SqkOVd5nLSWY+WuhNoHh0PM8FSWA7g2o",
-    "token": "85d979e9c6ba44ce8aceff0b3bea79d6",
+    "token": "e7b3136759e34192a7fc20758d00684e",
     "avatar_url": "",
     "bio": "",
-    "badges": [],
+    "badges": [
+      "First Vote"
+    ],
     "following": [],
     "followers": []
   }

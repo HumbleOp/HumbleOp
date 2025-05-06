@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, g
+from flask_sqlalchemy import SQLAlchemy
 from argon2 import PasswordHasher, exceptions
 ph = PasswordHasher(
     time_cost=2,      # iterations
@@ -44,6 +45,96 @@ def award_badge(username, badge_name):
 app = Flask(__name__)
 scheduler = BackgroundScheduler()
 scheduler.start()
+
+# --- Flask SQLAlchemy setup --------------------------
+BASE_DIR    = os.path.abspath(os.path.dirname(__file__))
+DB_FILENAME = "humbleop.db"
+DB_PATH     = os.path.join(BASE_DIR, DB_FILENAME)
+print(f"🔧 SQLite DB path: {DB_PATH}")
+
+app.config['SQLALCHEMY_DATABASE_URI']        = f"sqlite:///{DB_PATH}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# --- Models ----------------------------------------
+# --- Association table for self-referential follows ----------------
+follows = db.Table(
+    'follows',
+    db.Column('follower', db.String, db.ForeignKey('users.username'), primary_key=True),
+    db.Column('followed', db.String, db.ForeignKey('users.username'), primary_key=True)
+)
+
+class User(db.Model):
+    __tablename__      = 'users'
+    username           = db.Column(db.String, primary_key=True)
+    password_hash      = db.Column(db.String, nullable=False)
+    token              = db.Column(db.String, unique=True)
+    avatar_url         = db.Column(db.String, default='')
+    bio                = db.Column(db.String, default='')
+
+    # standard relations
+    comments           = db.relationship('Comment', backref='author', lazy=True)
+    votes              = db.relationship('Vote',    backref='voter',  lazy=True)
+    badges             = db.relationship('Badge',   backref='user',   lazy=True)
+
+    # follow/followers many-to-many
+    following = db.relationship(
+        'User',
+        secondary=follows,
+        primaryjoin=lambda: follows.c.follower == User.username,
+        secondaryjoin=lambda: follows.c.followed == User.username,
+        backref=db.backref('followers', lazy='dynamic'),
+        lazy='dynamic'
+    )
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    id        = db.Column(db.String, primary_key=True)
+    author    = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    body      = db.Column(db.Text, nullable=False)
+    started   = db.Column(db.Boolean, default=False)
+    postponed = db.Column(db.Boolean, default=False)
+    winner    = db.Column(db.String, db.ForeignKey('users.username'))
+    second    = db.Column(db.String, db.ForeignKey('users.username'))
+    comments  = db.relationship('Comment', backref='post', lazy=True)
+    votes     = db.relationship('Vote',    backref='post', lazy=True)
+    flags     = db.relationship('Flag',    backref='post', lazy=True)
+    likes     = db.relationship('Like',    backref='post', lazy=True)
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id        = db.Column(db.Integer, primary_key=True)
+    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    commenter = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    text      = db.Column(db.Text, nullable=False)
+
+class Vote(db.Model):
+    __tablename__ = 'votes'
+    id        = db.Column(db.Integer, primary_key=True)
+    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    voter     = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    candidate = db.Column(db.String, nullable=False)  # commenter username
+
+class Flag(db.Model):
+    __tablename__ = 'flags'
+    id        = db.Column(db.Integer, primary_key=True)
+    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    flagger   = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+
+class Like(db.Model):
+    __tablename__ = 'likes'
+    id        = db.Column(db.Integer, primary_key=True)
+    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    liker     = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+
+class Badge(db.Model):
+    __tablename__ = 'badges'
+    id        = db.Column(db.Integer, primary_key=True)
+    user      = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    name      = db.Column(db.String, nullable=False)
+
+
 
 DATA_FILE = "data.json"
 if os.path.exists(DATA_FILE):
@@ -107,26 +198,29 @@ def handle_duel_timeout(post_id):
 # --- Auth endpoints with Argon2id --------------------
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.json or {}
+    data     = request.json or {}
     username = data.get("username")
     password = data.get("password")
+
     if not username or not password:
         return jsonify({"error": "username and password required"}), 400
-    if username in users:
+
+    # already existent?
+    if User.query.get(username):
         return jsonify({"error": "username already exists"}), 409
 
-    # genera hash Argon2 e inizializza profilo
+    # generate hash and create user
     hashed = ph.hash(password)
-    users[username] = {
-        "password_hash": hashed,
-        "token":        None,
-        "avatar_url":   "",
-        "bio":          "",
-        "badges":       [],
-        "following":    [],
-        "followers":    []
-    }
-    save_users()
+    user = User(
+        username      = username,
+        password_hash = hashed,
+        token         = None,
+        avatar_url    = "",
+        bio           = ""
+    )
+    db.session.add(user)
+    db.session.commit()
+
     return jsonify({"status": "user registered"}), 201
 
 
@@ -226,29 +320,30 @@ def update_profile():
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json or {}
+    data     = request.json or {}
     username = data.get("username")
     password = data.get("password")
-    user = users.get(username)
+
+    user = User.query.get(username)
     if not user:
         return jsonify({"error": "invalid credentials"}), 401
 
-    # verification Argon2; exception if mismatch
+    # verification Argon2
     try:
-        ph.verify(user["password_hash"], password)
+        ph.verify(user.password_hash, password)
     except exceptions.VerifyMismatchError:
         return jsonify({"error": "invalid credentials"}), 401
 
-    # Auto re-hasht if parameters changed
-    if ph.check_needs_rehash(user["password_hash"]):
-        user["password_hash"] = ph.hash(password)
-        save_users()
+    # re-hash if needed
+    if ph.check_needs_rehash(user.password_hash):
+        user.password_hash = ph.hash(password)
+        db.session.commit()
 
-    # Create token
-    token = uuid.uuid4().hex
-    user["token"] = token
-    save_users()
-    return jsonify({"token": token}), 200
+    # create and save a new token
+    user.token = uuid.uuid4().hex
+    db.session.commit()
+
+    return jsonify({"token": user.token}), 200
 
 # --- Post creation & duel endpoints -----------------
 @app.route("/create_post/<post_id>", methods=["POST"])
@@ -501,5 +596,7 @@ def get_results(post_id):
 
 # --- App runner -----------------------------------
 if __name__ == "__main__":
-    print(app.url_map)
-    app.run(debug=True)
+    with app.app_context():
+        print("📦 Creating database tables…")
+        db.create_all()
+    app.run(debug=True, use_reloader=False)

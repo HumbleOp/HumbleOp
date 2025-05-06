@@ -22,42 +22,24 @@
     "flags": []
   },
   "post1": {
-    "author": "Jack",
-    "body": "Is AI helping or hurting society?",
+    "author": "alice",
+    "body": "Hello, HumbleOp world!",
     "comments": {
-      "alice": "I think AI accelerates progress.",
-      "bob": "It also brings significant risks.",
-      "carol": "Depends on how we govern it."
+      "bob": "My first comment!"
     },
     "commenters": [
-      "alice",
-      "bob",
-      "carol"
+      "bob"
     ],
     "votes": {
-      "alice": 5,
-      "bob": 3,
-      "carol": 1
+      "bob": 1
     },
     "voted_users": [
-      "user1",
-      "user2",
-      "user3",
-      "user4",
-      "user5",
-      "user6",
-      "user7",
-      "user8",
-      "user9"
+      "alice"
     ],
     "flags": [],
-    "likes": [
-      "user5"
-    ],
+    "likes": [],
     "winner": "bob",
-    "second": "bob",
-    "postponed": false,
-    "started": false
+    "second": null
   },
   "postX": {
     "winner": "alice",
