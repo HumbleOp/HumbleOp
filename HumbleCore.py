@@ -248,7 +248,7 @@ def follow_user(username):
     if username == me:
         return jsonify({"error": "Cannot follow yourself."}), 400
 
-    # aggiungi follow
+    # add follow
     if username in users[me]["following"]:
         return jsonify({"error": "Already following."}), 409
 
@@ -395,12 +395,38 @@ def start_duel(post_id):
 
     # award "Baptism of Fire" badge for first duel
     award_badge(winner, "Baptism of Fire")
+
+    # —— CRITIQUE MASTER LOGIC ——   
+    votes_for_winner = post["votes"].get(winner, 0)
+    total_votes = sum(post["votes"].values())
+    if total_votes > 0 and (votes_for_winner / total_votes) >= 0.60:
+        # increment their “quality wins” counter
+        quality_wins = users[winner].setdefault("quality_duel_wins", 0) + 1
+        users[winner]["quality_duel_wins"] = quality_wins
+        save_users()
+
+        # award "Great Debater"
+        if quality_wins == 5:
+            award_badge(winner, "Great Debater")
     save_data()
     return jsonify({
         "status": "Duel started.",
         "winner": winner,
         "second": second
     }), 200
+
+
+# award "Marathoner"
+win_count = sum(1 for p in posts.values() if p.get("winner") == winner)
+if win_count >= 100:
+    award_badge(winner, "Marathoner Legend")
+elif win_count >= 50:
+    award_badge(winner, "Marathoner III")
+elif win_count >= 10:
+    award_badge(winner, "Marathoner II")
+elif win_count >= 5:
+    award_badge(winner, "Marathoner I")
+
 
 @app.route("/start_now/<post_id>", methods=["POST"])
 @login_required
@@ -428,10 +454,24 @@ def add_comment(post_id):
 
     post["comments"][commenter] = text
     post["commenters"].append(commenter)
+
     save_data()
 
     # award "First blood" badge for first commenter on a post
     award_badge(commenter, "First blood")
+
+    long_comments = sum(
+        1 for txt in post["comments"].values() 
+        if len(txt) >= 100
+    )
+    total_long_comments = sum(
+    1 for p in posts.values() 
+      for txt in p["comments"].values() 
+      if len(txt) >= 100
+    )
+    if total_long_comments >= 20:
+        award_badge(commenter, "Eloquent Speaker")
+
 
     return jsonify({
         "status": "Comment added.",
@@ -476,8 +516,8 @@ def vote(post_id):
 
     save_data()
     
-    # award "First Vote" badge for first voter
-    award_badge(voter, "First Vote")
+    # award "First Responder" badge for first voter
+    award_badge(voter, "First Responder")
     total_votes_for_candidate = sum(
         p["votes"].get(candidate, 0)
         for p in posts.values()
