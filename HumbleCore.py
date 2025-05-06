@@ -3,22 +3,42 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
-
 from flask import Flask, request, jsonify, g
-from werkzeug.security import generate_password_hash, check_password_hash
+from argon2 import PasswordHasher, exceptions
+ph = PasswordHasher(
+    time_cost=2,      # iterations
+    memory_cost=51200,# in KiB (50 MiB)
+    parallelism=8,    # thread
+)
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # --- Users persistence --------------------------------
 USERS_FILE = "users.json"
 if os.path.exists(USERS_FILE):
-    with open(USERS_FILE, "r") as f:
-        users = json.load(f)
+    try:
+        with open(USERS_FILE, "r") as f:
+            users = json.load(f)
+    except json.JSONDecodeError:
+        users = {}
 else:
     users = {}
+
 
 def save_users():
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
+
+def award_badge(username, badge_name):
+    """
+    Adds a badge to the user if they don’t already have it.
+    """
+    user = users.get(username)
+    if not user:
+        return
+    if badge_name not in user["badges"]:
+        user["badges"].append(badge_name)
+        save_users()
+
 
 # --- Flask & Scheduler setup --------------------------
 app = Flask(__name__)
@@ -27,10 +47,14 @@ scheduler.start()
 
 DATA_FILE = "data.json"
 if os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "r") as f:
-        posts = json.load(f)
+    try:
+        with open(DATA_FILE, "r") as f:
+            posts = json.load(f)
+    except json.JSONDecodeError:
+        posts = {}
 else:
     posts = {}
+
 
 def save_data():
     with open(DATA_FILE, "w") as f:
@@ -80,7 +104,7 @@ def handle_duel_timeout(post_id):
 
     save_data()
 
-# --- Auth endpoints ---------------------------------
+# --- Auth endpoints with Argon2id --------------------
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json or {}
@@ -91,12 +115,114 @@ def register():
     if username in users:
         return jsonify({"error": "username already exists"}), 409
 
+    # genera hash Argon2 e inizializza profilo
+    hashed = ph.hash(password)
     users[username] = {
-        "password_hash": generate_password_hash(password),
-        "token": None
+        "password_hash": hashed,
+        "token":        None,
+        "avatar_url":   "",
+        "bio":          "",
+        "badges":       [],
+        "following":    [],
+        "followers":    []
     }
     save_users()
     return jsonify({"status": "user registered"}), 201
+
+
+@app.route("/profile", methods=["GET"])
+@login_required
+def get_profile():
+    uname = g.current_user
+    user = users.get(uname, {})
+    return jsonify({
+        "username":  uname,
+        "avatar_url": user.get("avatar_url",""),
+        "bio":        user.get("bio",""),
+        "badges":     user.get("badges",[]),
+        "following":  user.get("following",[]),
+        "followers":  user.get("followers",[])
+    }), 200
+
+@app.route("/follow/<username>", methods=["POST"])
+@login_required
+def follow_user(username):
+    """Current user in g.current_user follows <username>."""
+    me = g.current_user
+    if username not in users:
+        return jsonify({"error": "User not found."}), 404
+    if username == me:
+        return jsonify({"error": "Cannot follow yourself."}), 400
+
+    # aggiungi follow
+    if username in users[me]["following"]:
+        return jsonify({"error": "Already following."}), 409
+
+    users[me]["following"].append(username)
+    users[username]["followers"].append(me)
+    save_users()
+    return jsonify({"status": f"You are now following {username}"}), 200
+
+@app.route("/unfollow/<username>", methods=["POST"])
+@login_required
+def unfollow_user(username):
+    """Current user in g.current_user unfollows <username>."""
+    me = g.current_user
+    if username not in users:
+        return jsonify({"error": "User not found."}), 404
+    if username == me:
+        return jsonify({"error": "Cannot unfollow yourself."}), 400
+
+    if username not in users[me]["following"]:
+        return jsonify({"error": "Not following."}), 409
+
+    users[me]["following"].remove(username)
+    users[username]["followers"].remove(me)
+    save_users()
+    return jsonify({"status": f"You have unfollowed {username}"}), 200
+
+@app.route("/following", methods=["GET"])
+@login_required
+def get_following():
+    """List users that current user is following."""
+    me = g.current_user
+    return jsonify({"following": users[me].get("following", [])}), 200
+
+@app.route("/followers", methods=["GET"])
+@login_required
+def get_followers():
+    """List users that follow current user."""
+    me = g.current_user
+    return jsonify({"followers": users[me].get("followers", [])}), 200
+
+
+@app.route("/profile", methods=["PUT"])
+@login_required
+def update_profile():
+    uname = g.current_user
+    user = users.get(uname)
+    if not user:
+        return jsonify({"error":"User not found"}), 404
+
+    data = request.json or {}
+    # Only these fields can be updated manually
+    if "avatar_url" in data:
+        user["avatar_url"] = data["avatar_url"]
+    if "bio" in data:
+        user["bio"] = data["bio"]
+
+    save_users()
+    return jsonify({
+        "status": "profile updated",
+        "profile": {
+            "username":   uname,
+            "avatar_url": user["avatar_url"],
+            "bio":        user["bio"],
+            "badges":     user["badges"]
+        }
+    }), 200
+
+
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -104,9 +230,21 @@ def login():
     username = data.get("username")
     password = data.get("password")
     user = users.get(username)
-    if not user or not check_password_hash(user["password_hash"], password):
+    if not user:
         return jsonify({"error": "invalid credentials"}), 401
 
+    # verification Argon2; exception if mismatch
+    try:
+        ph.verify(user["password_hash"], password)
+    except exceptions.VerifyMismatchError:
+        return jsonify({"error": "invalid credentials"}), 401
+
+    # Auto re-hasht if parameters changed
+    if ph.check_needs_rehash(user["password_hash"]):
+        user["password_hash"] = ph.hash(password)
+        save_users()
+
+    # Create token
     token = uuid.uuid4().hex
     user["token"] = token
     save_users()
@@ -159,6 +297,9 @@ def start_duel(post_id):
         run_date=datetime.now() + timedelta(hours=2),
         args=[post_id]
     )
+
+    # award "Baptism of Fire" badge for first duel
+    award_badge(winner, "Baptism of Fire")
     save_data()
     return jsonify({
         "status": "Duel started.",
@@ -193,6 +334,10 @@ def add_comment(post_id):
     post["comments"][commenter] = text
     post["commenters"].append(commenter)
     save_data()
+
+    # award "First blood" badge for first commenter on a post
+    award_badge(commenter, "First blood")
+
     return jsonify({
         "status": "Comment added.",
         "comment": {"commenter": commenter, "text": text}
@@ -235,6 +380,16 @@ def vote(post_id):
     post["second"] = sorted_votes[1][0] if len(sorted_votes) > 1 else None
 
     save_data()
+    
+    # award "First Vote" badge for first voter
+    award_badge(voter, "First Vote")
+    total_votes_for_candidate = sum(
+        p["votes"].get(candidate, 0)
+        for p in posts.values()
+    )
+    if total_votes_for_candidate >= 10:
+        award_badge(candidate, "Popular Debater")
+   
     return jsonify({
         "message": f"{voter} voted for {candidate}",
         "votes": post["votes"]
@@ -268,7 +423,7 @@ def flag_post(post_id):
     net_flags    = max(0, flag_count - like_count)
     flag_ratio   = (net_flags / winner_votes) if winner_votes > 0 else 0
 
-    if flag_ratio >= 0.4:
+    if flag_ratio >= 0.6:
         post["started"] = False
         second = post.get("second")
         if second:
