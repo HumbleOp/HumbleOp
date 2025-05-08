@@ -2,7 +2,7 @@ import os
 import logging
 
 # Set up logging for debugging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
 
 # Define the base directory of the current file
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -24,8 +24,13 @@ class Config:
         for file_path in [Config.USERS_FILE, Config.DATA_FILE]:
             if not os.path.exists(file_path):
                 logging.warning(f"{file_path} not found. Creating an empty JSON file.")
-                with open(file_path, 'w') as f:
-                    f.write('{}')  # or '[]' if you expect a list
+                try:
+                    with open(file_path, 'w') as f:
+                        f.write('{}')  # or default JSON data
+                    os.chmod(file_path, 0o600)  # Optional: Restrict file permissions
+                except IOError as e:
+                    logging.error(f"Failed to create {file_path}: {e}")
+                    raise
 
 # Log the paths for debugging
 logging.info(f"USERS_FILE path: {Config.USERS_FILE}")
