@@ -50,5 +50,36 @@ def start_duel(post_id):
 
     award_badge(winner, "Baptism of Fire")
 
+        # —— CRITIQUE MASTER LOGIC ——   
+    votes_for_winner = post["votes"].get(winner, 0)
+    total_votes = sum(post["votes"].values())
+    if total_votes > 0 and (votes_for_winner / total_votes) >= 0.60:
+        # increment their “quality wins” counter
+        quality_wins = users[winner].setdefault("quality_duel_wins", 0) + 1
+        users[winner]["quality_duel_wins"] = quality_wins
+        save_users()
+
+        # award "Great Debater"
+        if quality_wins == 5:
+            award_badge(winner, "Great Debater")
+    save_data()
+    return jsonify({
+        "status": "Duel started.",
+        "winner": winner,
+        "second": second
+    }), 200
+
+
+# award "Marathoner"
+win_count = sum(1 for p in posts.values() if p.get("winner") == winner)
+if win_count >= 100:
+    award_badge(winner, "Marathoner Legend")
+elif win_count >= 50:
+    award_badge(winner, "Marathoner III")
+elif win_count >= 10:
+    award_badge(winner, "Marathoner II")
+elif win_count >= 5:
+    award_badge(winner, "Marathoner I")
+
     save_data(posts, "data.json")
     return jsonify({"status": "Duel started.", "winner": winner, "second": second}), 200
