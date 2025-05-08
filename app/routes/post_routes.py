@@ -1,8 +1,7 @@
 from flask import Blueprint, request, jsonify, g
 from app.utils.data_utils import save_data
-from app.utils.badge_utils import award_badge
+from app.utils.badge_utils import award_badge, load_users, save_users
 from app.scheduler.scheduler import scheduler, handle_duel_timeout
-from app.utils.user_utils import load_users, save_users
 from datetime import datetime, timedelta
 import logging
 from threading import Lock
@@ -71,10 +70,16 @@ def start_duel(post_id):
             logging.error(f"Failed to schedule timeout for duel {post_id}: {e}")
             return jsonify({"error": "Failed to schedule duel timeout."}), 500
 
+        # Load users once for efficiency
+        users = load_users()
+
         # Award badges
-        _award_baptism_of_fire(winner)
-        _award_great_debater(winner, post["votes"])
-        _award_marathoner(winner)
+        _award_baptism_of_fire(winner, users)
+        _award_great_debater(winner, post["votes"], users)
+        _award_marathoner(winner, users)
+
+        # Save all user changes once
+        save_users(users)
 
         # Save updated posts
         save_data(posts, "data.json")
@@ -88,31 +93,25 @@ def start_duel(post_id):
             "second": second
         }), 200
 
-
-def _award_baptism_of_fire(winner):
+def _award_baptism_of_fire(winner, users):
     """Award the 'Baptism of Fire' badge to the winner."""
-    award_badge(winner, BAPTISM_OF_FIRE)
+    award_badge(winner, BAPTISM_OF_FIRE, users, save=False)
 
-
-def _award_great_debater(winner, votes):
+def _award_great_debater(winner, votes, users):
     """Award the 'Great Debater' badge if the winner meets the criteria."""
     total_votes = sum(votes.values())
     if total_votes > 0:
         votes_for_winner = votes.get(winner, 0)
         if (votes_for_winner / total_votes) >= GREAT_DEBATER_THRESHOLD:
-            users = load_users()
             quality_wins = users[winner].get("quality_duel_wins", 0) + 1
             users[winner]["quality_duel_wins"] = quality_wins
-            save_users(users)
-
             if quality_wins == 5:
-                award_badge(winner, GREAT_DEBATER)
+                award_badge(winner, GREAT_DEBATER, users, save=False)
 
-
-def _award_marathoner(winner):
+def _award_marathoner(winner, users):
     """Award the appropriate 'Marathoner' badge based on the winner's total wins."""
     win_count = sum(1 for p in posts.values() if p.get("winner") == winner)
     for badge, threshold in MARATHONER_THRESHOLDS.items():
         if win_count >= threshold:
-            award_badge(winner, badge)
+            award_badge(winner, badge, users, save=False)
             break
