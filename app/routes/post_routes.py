@@ -1,85 +1,118 @@
 from flask import Blueprint, request, jsonify, g
 from app.utils.data_utils import save_data
-from app.scheduler.scheduler import scheduler, handle_duel_timeout
 from app.utils.badge_utils import award_badge
+from app.scheduler.scheduler import scheduler, handle_duel_timeout
+from app.utils.user_utils import load_users, save_users
 from datetime import datetime, timedelta
+import logging
+from threading import Lock
 
+# Blueprint for posts
 post_bp = Blueprint("posts", __name__)
 
-posts = {}  # Replace with actual data loading logic
+# In-memory storage for posts (should be replaced with a database in production)
+posts = {}  # Load posts at application startup
 
-@post_bp.route("/create/<post_id>", methods=["POST"])
-def create_post(post_id):
-    body = request.json.get("body")
-    author = g.current_user
-    if not body:
-        return jsonify({"error": "Field 'body' is required."}), 400
+# Thread lock for concurrency safety
+lock = Lock()
 
-    posts[post_id] = {
-        "author": author,
-        "body": body,
-        "comments": {},
-        "commenters": [],
-        "votes": {},
-        "voted_users": [],
-        "flags": [],
-        "likes": []
-    }
-    save_data(posts, "data.json")
-    return jsonify({"status": "Post created."}), 200
+# Constants for badge names
+BAPTISM_OF_FIRE = "Baptism of Fire"
+GREAT_DEBATER = "Great Debater"
+MARATHONER_LEGEND = "Marathoner Legend"
+MARATHONER_III = "Marathoner III"
+MARATHONER_II = "Marathoner II"
+MARATHONER_I = "Marathoner I"
+
+# Constants for thresholds
+GREAT_DEBATER_THRESHOLD = 0.60
+MARATHONER_THRESHOLDS = {
+    MARATHONER_LEGEND: 100,
+    MARATHONER_III: 50,
+    MARATHONER_II: 10,
+    MARATHONER_I: 5,
+}
 
 @post_bp.route("/start_duel/<post_id>", methods=["POST"])
 def start_duel(post_id):
-    post = posts.get(post_id)
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
+    with lock:  # Ensure thread-safe access to `posts`
+        # Retrieve post and validate
+        post = posts.get(post_id)
+        if not post:
+            return jsonify({"error": "Post not found."}), 404
 
-    if len(post["commenters"]) < 1:
-        return jsonify({"error": "Not enough comments to start duel."}), 400
+        if not post.get("commenters"):
+            return jsonify({"error": "Not enough comments to start duel."}), 400
 
-    ranking = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
-    winner = ranking[0][0]
-    second = ranking[1][0] if len(ranking) > 1 else None
+        if not post.get("votes"):
+            return jsonify({"error": "No votes available for this post."}), 400
 
-    post["winner"] = winner
-    post["second"] = second
-    post["postponed"] = False
-    post["started"] = False
+        # Rank votes to determine winner and second place
+        try:
+            ranking = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
+            winner = ranking[0][0]
+            second = ranking[1][0] if len(ranking) > 1 else None
+        except IndexError:
+            return jsonify({"error": "Not enough votes to rank participants."}), 400
 
-    scheduler.add_job(handle_duel_timeout, 'date', run_date=datetime.now() + timedelta(hours=2), args=[post_id])
+        # Update post details
+        post["winner"] = winner
+        post["second"] = second
+        post["postponed"] = False
+        post["started"] = False
 
-    award_badge(winner, "Baptism of Fire")
+        # Schedule duel timeout
+        try:
+            run_date = datetime.now() + timedelta(hours=2)
+            scheduler.add_job(
+                handle_duel_timeout, 'date', run_date=run_date, args=[post_id]
+            )
+        except Exception as e:
+            logging.error(f"Failed to schedule timeout for duel {post_id}: {e}")
+            return jsonify({"error": "Failed to schedule duel timeout."}), 500
 
-        # —— CRITIQUE MASTER LOGIC ——   
-    votes_for_winner = post["votes"].get(winner, 0)
-    total_votes = sum(post["votes"].values())
-    if total_votes > 0 and (votes_for_winner / total_votes) >= 0.60:
-        # increment their “quality wins” counter
-        quality_wins = users[winner].setdefault("quality_duel_wins", 0) + 1
-        users[winner]["quality_duel_wins"] = quality_wins
-        save_users()
+        # Award badges
+        _award_baptism_of_fire(winner)
+        _award_great_debater(winner, post["votes"])
+        _award_marathoner(winner)
 
-        # award "Great Debater"
-        if quality_wins == 5:
-            award_badge(winner, "Great Debater")
-    save_data()
-    return jsonify({
-        "status": "Duel started.",
-        "winner": winner,
-        "second": second
-    }), 200
+        # Save updated posts
+        save_data(posts, "data.json")
+
+        # Log duel start
+        logging.info(f"Duel started for post {post_id}. Winner: {winner}, Second: {second}")
+
+        return jsonify({
+            "status": "Duel started.",
+            "winner": winner,
+            "second": second
+        }), 200
 
 
-# award "Marathoner"
-win_count = sum(1 for p in posts.values() if p.get("winner") == winner)
-if win_count >= 100:
-    award_badge(winner, "Marathoner Legend")
-elif win_count >= 50:
-    award_badge(winner, "Marathoner III")
-elif win_count >= 10:
-    award_badge(winner, "Marathoner II")
-elif win_count >= 5:
-    award_badge(winner, "Marathoner I")
+def _award_baptism_of_fire(winner):
+    """Award the 'Baptism of Fire' badge to the winner."""
+    award_badge(winner, BAPTISM_OF_FIRE)
 
-    save_data(posts, "data.json")
-    return jsonify({"status": "Duel started.", "winner": winner, "second": second}), 200
+
+def _award_great_debater(winner, votes):
+    """Award the 'Great Debater' badge if the winner meets the criteria."""
+    total_votes = sum(votes.values())
+    if total_votes > 0:
+        votes_for_winner = votes.get(winner, 0)
+        if (votes_for_winner / total_votes) >= GREAT_DEBATER_THRESHOLD:
+            users = load_users()
+            quality_wins = users[winner].get("quality_duel_wins", 0) + 1
+            users[winner]["quality_duel_wins"] = quality_wins
+            save_users(users)
+
+            if quality_wins == 5:
+                award_badge(winner, GREAT_DEBATER)
+
+
+def _award_marathoner(winner):
+    """Award the appropriate 'Marathoner' badge based on the winner's total wins."""
+    win_count = sum(1 for p in posts.values() if p.get("winner") == winner)
+    for badge, threshold in MARATHONER_THRESHOLDS.items():
+        if win_count >= threshold:
+            award_badge(winner, badge)
+            break
