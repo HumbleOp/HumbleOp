@@ -6,9 +6,9 @@ def test_register_blueprints():
     register_blueprints(app)
 
     # Assert that all blueprints are registered
-    assert "/auth" in app.blueprints
-    assert "/posts" in app.blueprints
-    assert "/comments" in app.blueprints
-    assert "/votes" in app.blueprints
-    assert "/interactions" in app.blueprints
-    assert "/profile" in app.blueprints
+    assert "auth" in app.blueprints
+    assert "posts" in app.blueprints
+    assert "comments" in app.blueprints
+    assert "votes" in app.blueprints
+    assert "interactions" in app.blueprints
+    assert "profile" in app.blueprints

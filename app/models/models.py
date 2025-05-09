@@ -22,8 +22,8 @@ class User(db.Model):
 
     # Relationships
     comments = db.relationship('Comment', backref='author', lazy=True, cascade='all, delete-orphan')
-    votes = db.relationship('Vote', backref='voter', lazy=True, cascade='all, delete-orphan')
-    badges = db.relationship('Badge', backref='user', lazy=True, cascade='all, delete-orphan')
+    votes = db.relationship('Vote', back_populates='user', lazy=True, cascade='all, delete-orphan')  # Fixed backref conflict
+    badges = db.relationship('Badge', back_populates='user', lazy=True, cascade='all, delete-orphan')  # Fixed backref conflict
 
     following = db.relationship(
         'User',  # Self-referential relationship
@@ -73,6 +73,9 @@ class Vote(db.Model):
     voter = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
     candidate = db.Column(db.String, nullable=False)
 
+    # Relationships
+    user = db.relationship('User', back_populates='votes')  # Fixed backref conflict
+
 class Flag(db.Model):
     """Model representing a flag on a post."""
     __tablename__ = 'flags'
@@ -97,5 +100,8 @@ class Badge(db.Model):
 
     # Columns
     id = db.Column(db.Integer, primary_key=True)
-    user = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    user_id = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
     name = db.Column(db.String, nullable=False)
+
+    # Relationships
+    user = db.relationship('User', back_populates='badges')  # Fixed backref conflict

@@ -32,7 +32,7 @@ def login():
     username = data.get("username")
     password = data.get("password")
 
-    user = User.query.get(username)
+    user = db.session.get(User, username)
     if not user:
         return jsonify({"error": "invalid credentials"}), 401
 

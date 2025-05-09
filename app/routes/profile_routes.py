@@ -1,35 +1,49 @@
 from flask import Blueprint, request, jsonify, g
-from app.utils.data_utils import save_data
+from app.models.models import User, db
 
 profile_bp = Blueprint("profile", __name__)
 
-users = {}  # Replace with actual data loading logic
-
 @profile_bp.route("/", methods=["GET"])
 def get_profile():
-    uname = g.current_user
-    user = users.get(uname, {})
+    """Get the profile of the currently authenticated user."""
+    if not g.current_user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    user = db.session.query(User).filter_by(username=g.current_user).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
     return jsonify({
-        "username": uname,
-        "avatar_url": user.get("avatar_url", ""),
-        "bio": user.get("bio", ""),
-        "badges": user.get("badges", []),
-        "following": user.get("following", []),
-        "followers": user.get("followers", [])
+        "username": user.username,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio,
+        "badges": [badge.name for badge in user.badges],  # Assuming badges is a relationship
+        "following": [u.username for u in user.following],  # Assuming self-referential relationship
+        "followers": [u.username for u in user.followers]
     }), 200
 
 @profile_bp.route("/", methods=["PUT"])
 def update_profile():
-    uname = g.current_user
-    user = users.get(uname)
+    """Update the profile of the currently authenticated user."""
+    if not g.current_user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    user = db.session.query(User).filter_by(username=g.current_user).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
 
     data = request.json or {}
     if "avatar_url" in data:
-        user["avatar_url"] = data["avatar_url"]
+        user.avatar_url = data["avatar_url"]
     if "bio" in data:
-        user["bio"] = data["bio"]
+        user.bio = data["bio"]
 
-    save_data(users, "users.json")
-    return jsonify({"status": "Profile updated", "profile": user}), 200
+    db.session.commit()
+    return jsonify({
+        "status": "Profile updated",
+        "profile": {
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio
+        }
+    }), 200

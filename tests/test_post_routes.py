@@ -17,6 +17,7 @@ def test_create_post(client):
     assert response.status_code == 200
     assert response.json["status"] == "Post created."
 
+
 def test_start_duel(client):
     # Setup: Register user, login, create post, add comments and votes
     client.post("/auth/register", json={

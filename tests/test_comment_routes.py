@@ -23,6 +23,7 @@ def test_add_comment(client):
     assert response.status_code == 200
     assert response.json["status"] == "Comment added."
 
+
 def test_get_comments(client):
     client.post("/auth/register", json={
         "username": "testuser",

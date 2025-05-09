@@ -16,6 +16,7 @@ def test_get_profile(client):
     assert response.status_code == 200
     assert response.json["username"] == "testuser"
 
+
 def test_update_profile(client):
     client.post("/auth/register", json={
         "username": "testuser",

@@ -6,6 +6,7 @@ def test_register_user(client):
     assert response.status_code == 201
     assert response.json["status"] == "user registered"
 
+
 def test_register_existing_user(client):
     client.post("/auth/register", json={
         "username": "testuser",
@@ -17,6 +18,7 @@ def test_register_existing_user(client):
     })
     assert response.status_code == 409
     assert response.json["error"] == "username already exists"
+
 
 def test_login_user(client):
     client.post("/auth/register", json={
