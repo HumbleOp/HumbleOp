@@ -1,13 +1,13 @@
-from flask import Flask, g
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
 from flask_migrate import Migrate
 from app.config.config import Config
-from app.models.models import db
+from app.models.models import db  # Unified db instance
 from app.routes.auth_routes import auth_bp
 from app.routes.post_routes import post_bp
 from app.routes.interaction_routes import interaction_bp
 from app.routes.profile_routes import profile_bp
 from app.middleware import authenticate_user
+
 
 def create_app():
     """Factory function to create a Flask application."""
@@ -15,8 +15,8 @@ def create_app():
     app.config.from_object(Config)
 
     # Initialize extensions
-    db.init_app(app)
-    migrate = Migrate(app, db)
+    db.init_app(app)  # Use unified db instance
+    Migrate(app, db)  # Initialize Flask-Migrate
 
     # Middleware
     @app.before_request
@@ -40,6 +40,7 @@ def create_app():
 
     return app
 
+
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    app.run(debug=True)  # Debug mode for development; use debug=False in production
