@@ -32,8 +32,6 @@ MARATHONER_THRESHOLDS = {
     MARATHONER_I: 5,
 }
 
-<<<<<<< HEAD
-=======
 @post_bp.route("/create/<post_id>", methods=["POST"])
 def create_post(post_id):
     if post_id in posts:
@@ -51,7 +49,6 @@ def create_post(post_id):
     }
     return jsonify({"status": "Post created.", "post": posts[post_id]}), 200
 
->>>>>>> bfa9cd8 (update)
 @post_bp.route("/start_duel/<post_id>", methods=["POST"])
 def start_duel(post_id):
     with lock:  # Ensure thread-safe access to `posts`
@@ -134,8 +131,4 @@ def _award_marathoner(winner, users):
     for badge, threshold in MARATHONER_THRESHOLDS.items():
         if win_count >= threshold:
             award_badge(winner, badge, users, save=False)
-<<<<<<< HEAD
             break
-=======
-            break
->>>>>>> bfa9cd8 (update)
