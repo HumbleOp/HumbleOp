@@ -1,26 +1,21 @@
 import pytest
-import sys
-import os
-from main import create_app
 from app.models.models import db
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app import create_app
 
 @pytest.fixture
 def app():
+    """Setup Flask application for testing."""
     app = create_app()
-    app.config.update({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",  # In-memory database for testing
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False
-    })
+    app.config["TESTING"] = True
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
 
     with app.app_context():
-        db.create_all()
+        db.create_all()  # Create all tables
         yield app
         db.session.remove()
-        db.drop_all()
+        db.drop_all()  # Drop all tables after tests
 
 @pytest.fixture
 def client(app):
+    """Provide a test client for the Flask app."""
     return app.test_client()

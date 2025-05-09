@@ -10,7 +10,7 @@ from app.routes.profile_routes import profile_bp
 from app.middleware import authenticate_user
 
 def create_app():
-    """Application factory for creating Flask app."""
+    """Factory function to create a Flask application."""
     app = Flask(__name__)
     app.config.from_object(Config)
 
@@ -18,7 +18,7 @@ def create_app():
     db.init_app(app)
     migrate = Migrate(app, db)
 
-    # Middleware to authenticate user
+    # Middleware
     @app.before_request
     def before_request():
         authenticate_user()
@@ -27,8 +27,8 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(post_bp, url_prefix="/posts")
     app.register_blueprint(interaction_bp, url_prefix="/interactions")
-    app.register_blueprint(profile_bp, url_prefix="/profile")  # Added URL prefix
-
+    app.register_blueprint(profile_bp, url_prefix="/profile")
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found_error(e):
