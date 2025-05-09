@@ -50,7 +50,10 @@ def add_comment(post_id):
             "comment": {"commenter": commenter, "text": text}
         }), 200
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> bfa9cd8 (update)
 @comment_bp.route("/<post_id>", methods=["GET"])
 def get_comments(post_id):
     """Retrieve all comments for a specific post."""
@@ -70,4 +73,8 @@ def get_comments(post_id):
         for c in post["commenters"]
     ]
 
+<<<<<<< HEAD
     return jsonify({"comments": comments}), 200
+=======
+    return jsonify({"comments": comments}), 200
+>>>>>>> bfa9cd8 (update)

@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: HumbleOp
+Version: 0.1
+License-File: LICENSE
+Requires-Dist: Flask
+Requires-Dist: pytest
+Dynamic: license-file
+Dynamic: requires-dist

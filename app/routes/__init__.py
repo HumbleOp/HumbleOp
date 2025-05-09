@@ -34,4 +34,8 @@ def register_blueprints(app: Flask) -> None:
             app.register_blueprint(bp, url_prefix=prefix)
             logging.info(f"Registered blueprint: {bp.name} with prefix {prefix}")
         except Exception as e:
+<<<<<<< HEAD
             logging.error(f"Failed to register blueprint: {bp.name} with prefix {prefix}. Error: {e}")
+=======
+            logging.error(f"Failed to register blueprint: {bp.name} with prefix {prefix}. Error: {e}")
+>>>>>>> bfa9cd8 (update)

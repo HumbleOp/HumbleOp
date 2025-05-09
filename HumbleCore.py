@@ -1,64 +1,35 @@
-import json
-import os
-import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, g
 from flask_sqlalchemy import SQLAlchemy
-from argon2 import PasswordHasher, exceptions
-ph = PasswordHasher(
-    time_cost=2,      # iterations
-    memory_cost=51200,# in KiB (50 MiB)
-    parallelism=8,    # thread
-)
+from sqlalchemy.orm import Session
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from argon2 import PasswordHasher, exceptions
+import jwt
+import uuid
 
-# --- Users persistence --------------------------------
-USERS_FILE = "users.json"
-if os.path.exists(USERS_FILE):
-    try:
-        with open(USERS_FILE, "r") as f:
-            users = json.load(f)
-    except json.JSONDecodeError:
-        users = {}
-else:
-    users = {}
+# --- Configuration ---
+SECRET_KEY = "your-secret-key"
+DB_PATH = "sqlite:///humbleop.db"
 
-
-def save_users():
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=2)
-
-def award_badge(username, badge_name):
-    """
-    Adds a badge to the user if they don’t already have it.
-    """
-    user = users.get(username)
-    if not user:
-        return
-    if badge_name not in user["badges"]:
-        user["badges"].append(badge_name)
-        save_users()
-
-
-# --- Flask & Scheduler setup --------------------------
+# --- App Initialization ---
 app = Flask(__name__)
-scheduler = BackgroundScheduler()
-scheduler.start()
-
-# --- Flask SQLAlchemy setup --------------------------
-BASE_DIR    = os.path.abspath(os.path.dirname(__file__))
-DB_FILENAME = "humbleop.db"
-DB_PATH     = os.path.join(BASE_DIR, DB_FILENAME)
-print(f"🔧 SQLite DB path: {DB_PATH}")
-
-app.config['SQLALCHEMY_DATABASE_URI']        = f"sqlite:///{DB_PATH}"
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_PATH
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# --- Models ----------------------------------------
-# --- Association table for self-referential follows ----------------
+# --- Job Scheduler ---
+jobstores = {
+    'default': SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')
+}
+scheduler = BackgroundScheduler(jobstores=jobstores)
+
+# --- Password Hasher ---
+ph = PasswordHasher(time_cost=2, memory_cost=51200, parallelism=8)
+
+# --- Models ---
 follows = db.Table(
     'follows',
     db.Column('follower', db.String, db.ForeignKey('users.username'), primary_key=True),
@@ -66,349 +37,408 @@ follows = db.Table(
 )
 
 class User(db.Model):
-    __tablename__      = 'users'
-    username           = db.Column(db.String, primary_key=True)
-    password_hash      = db.Column(db.String, nullable=False)
-    token              = db.Column(db.String, unique=True)
-    avatar_url         = db.Column(db.String, default='')
-    bio                = db.Column(db.String, default='')
+    __tablename__ = 'users'
+    username = db.Column(db.String, primary_key=True)
+    password_hash = db.Column(db.String, nullable=False)
+    token = db.Column(db.String, unique=True)
+    avatar_url = db.Column(db.String, default='')
+    bio = db.Column(db.String, default='')
 
-    # standard relations
-    comments           = db.relationship('Comment', backref='author', lazy=True)
-    votes              = db.relationship('Vote',    backref='voter',  lazy=True)
-    badges             = db.relationship('Badge',   backref='user',   lazy=True)
-
-    # follow/followers many-to-many
-    following = db.relationship(
+    comments = db.relationship('Comment', backref='author', lazy=True)
+    followers = db.relationship(
         'User',
         secondary=follows,
-        primaryjoin=lambda: follows.c.follower == User.username,
-        secondaryjoin=lambda: follows.c.followed == User.username,
-        backref=db.backref('followers', lazy='dynamic'),
+        primaryjoin=lambda: follows.c.followed == User.username,
+        secondaryjoin=lambda: follows.c.follower == User.username,
+        backref='following',
         lazy='dynamic'
     )
 
+class Vote(db.Model):
+    __tablename__ = 'votes'
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    voter_id = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    candidate_id = db.Column(db.String, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Post(db.Model):
     __tablename__ = 'posts'
-    id        = db.Column(db.String, primary_key=True)
-    author    = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
-    body      = db.Column(db.Text, nullable=False)
-    started   = db.Column(db.Boolean, default=False)
+    id = db.Column(db.String, primary_key=True)
+    author_id = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    started = db.Column(db.Boolean, default=False)
     postponed = db.Column(db.Boolean, default=False)
-    winner    = db.Column(db.String, db.ForeignKey('users.username'))
-    second    = db.Column(db.String, db.ForeignKey('users.username'))
-    comments  = db.relationship('Comment', backref='post', lazy=True)
-    votes     = db.relationship('Vote',    backref='post', lazy=True)
-    flags     = db.relationship('Flag',    backref='post', lazy=True)
-    likes     = db.relationship('Like',    backref='post', lazy=True)
+    winner_id = db.Column(db.String, db.ForeignKey('users.username'))
+    second_id = db.Column(db.String, db.ForeignKey('users.username'))
+    comments = db.relationship('Comment', backref='post', lazy=True)
+    likes = db.Column(db.Integer, default=0)
+    flags = db.Column(db.Integer, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Comment(db.Model):
     __tablename__ = 'comments'
-    id        = db.Column(db.Integer, primary_key=True)
-    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
-    commenter = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
-    text      = db.Column(db.Text, nullable=False)
-
-class Vote(db.Model):
-    __tablename__ = 'votes'
-    id        = db.Column(db.Integer, primary_key=True)
-    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
-    voter     = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
-    candidate = db.Column(db.String, nullable=False)  # commenter username
-
-class Flag(db.Model):
-    __tablename__ = 'flags'
-    id        = db.Column(db.Integer, primary_key=True)
-    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
-    flagger   = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
-
-class Like(db.Model):
-    __tablename__ = 'likes'
-    id        = db.Column(db.Integer, primary_key=True)
-    post_id   = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
-    liker     = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    author_id = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    text = db.Column(db.Text, nullable=False)
 
 class Badge(db.Model):
     __tablename__ = 'badges'
-    id        = db.Column(db.Integer, primary_key=True)
-    user      = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
-    name      = db.Column(db.String, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String, db.ForeignKey('users.username'), nullable=False)
+    name = db.Column(db.String, nullable=False)
 
+# --- Badge Service ---
+class BadgeService:
+    def __init__(self, db_session):
+        self.db_session = db_session
 
+    def award_badge(self, user, badge_name):
+        existing_badge = Badge.query.filter_by(user_id=user.username, name=badge_name).first()
+        if not existing_badge:
+            badge = Badge(user_id=user.username, name=badge_name)
+            self.db_session.add(badge)
+            self.db_session.commit()
+badge_service = BadgeService(db.session)
 
-DATA_FILE = "data.json"
-if os.path.exists(DATA_FILE):
-    try:
-        with open(DATA_FILE, "r") as f:
-            posts = json.load(f)
-    except json.JSONDecodeError:
-        posts = {}
-else:
-    posts = {}
+# --- Auth Service ---
+class AuthService:
+    @staticmethod
+    def generate_token(username):
+        payload = {
+            "username": username,
+            "exp": datetime.utcnow() + timedelta(days=1)
+        }
+        return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
+    @staticmethod
+    def verify_token(token):
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            return payload["username"]
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
 
-def save_data():
-    with open(DATA_FILE, "w") as f:
-        json.dump(posts, f, indent=2)
-    print("[DATA SAVED]")
-
-# --- Auth decorator ----------------------------------
+# --- Middleware ---
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.headers.get("Authorization", "")
         parts = auth.split()
         if len(parts) != 2 or parts[0] != "Bearer":
-            return jsonify({"error": "authorization required"}), 401
+            return jsonify({"error": "Authorization required"}), 401
         token = parts[1]
-        for uname, u in users.items():
-            if u.get("token") == token:
-                g.current_user = uname
-                return f(*args, **kwargs)
-        return jsonify({"error": "invalid token"}), 401
+        
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            username = payload.get("username")
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+
+        user = User.query.get(username)
+        if not user or user.token != token:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        g.current_user = user
+        return f(*args, **kwargs)
     return decorated
 
-# --- Duel timeout handler ----------------------------
-def handle_duel_timeout(post_id):
-    post = posts.get(post_id)
-    if not post or post.get("started"):
-        return
+# --- Background Job ---
+def check_postponed_duels():
+    with app.app_context():
+        now = datetime.utcnow()
+        postponed_duels = Post.query.filter_by(postponed=True).all()
+        for post in postponed_duels:
+            if post.updated_at + timedelta(minutes=30) <= now:
+                post.postponed = False
+                post.started = True
+                db.session.commit()
+                print(f"Auto-started duel for post: {post.id}")
 
-    if not post.get("postponed"):
-        post["postponed"] = True
-        scheduler.add_job(
-            handle_duel_timeout,
-            'date',
-            run_date=datetime.now() + timedelta(hours=6),
-            args=[post_id]
-        )
-    else:
-        post["winner"] = post.get("second")
-        post["postponed"] = False
-        post["started"] = False
-        scheduler.add_job(
-            handle_duel_timeout,
-            'date',
-            run_date=datetime.now() + timedelta(hours=2),
-            args=[post_id]
-        )
+scheduler.add_job(check_postponed_duels, 'interval', minutes=1)
+scheduler.start()
 
-    save_data()
+@app.teardown_appcontext
+def shutdown_scheduler(exception=None):
+    if scheduler.running:  # Check if the scheduler is running
+        scheduler.shutdown()
 
-# --- Auth endpoints with Argon2id --------------------
+# --- Routes ---
 @app.route("/register", methods=["POST"])
 def register():
-    data     = request.json or {}
+    data = request.json or {}
     username = data.get("username")
     password = data.get("password")
 
     if not username or not password:
         return jsonify({"error": "username and password required"}), 400
 
-    # already existent?
-    if User.query.get(username):
+    if User.query.filter_by(username=username).first():
         return jsonify({"error": "username already exists"}), 409
 
-    # generate hash and create user
     hashed = ph.hash(password)
-    user = User(
-        username      = username,
-        password_hash = hashed,
-        token         = None,
-        avatar_url    = "",
-        bio           = ""
-    )
+    token = AuthService.generate_token(username)
+    user = User(username=username, password_hash=hashed, token=token)
     db.session.add(user)
     db.session.commit()
 
-    return jsonify({"status": "user registered"}), 201
+    return jsonify({"status": "user registered", "token": token}), 201
 
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+
+    with db.session() as session:  # Use a session
+        user = session.get(User, username)
+        if not user:
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        try:
+            ph.verify(user.password_hash, password)
+        except exceptions.VerifyMismatchError:
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        if ph.check_needs_rehash(user.password_hash):
+            user.password_hash = ph.hash(password)
+        
+        token = AuthService.generate_token(username)
+        user.token = token
+        session.commit()
+
+        return jsonify({"token": token}), 200
 
 @app.route("/profile", methods=["GET"])
 @login_required
 def get_profile():
-    uname = g.current_user
-    user = users.get(uname, {})
+    user = g.current_user
     return jsonify({
-        "username":  uname,
-        "avatar_url": user.get("avatar_url",""),
-        "bio":        user.get("bio",""),
-        "badges":     user.get("badges",[]),
-        "following":  user.get("following",[]),
-        "followers":  user.get("followers",[])
+        "username": user.username,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio
     }), 200
-
-@app.route("/follow/<username>", methods=["POST"])
-@login_required
-def follow_user(username):
-    """Current user in g.current_user follows <username>."""
-    me = g.current_user
-    if username not in users:
-        return jsonify({"error": "User not found."}), 404
-    if username == me:
-        return jsonify({"error": "Cannot follow yourself."}), 400
-
-    # add follow
-    if username in users[me]["following"]:
-        return jsonify({"error": "Already following."}), 409
-
-    users[me]["following"].append(username)
-    users[username]["followers"].append(me)
-    save_users()
-    return jsonify({"status": f"You are now following {username}"}), 200
-
-@app.route("/unfollow/<username>", methods=["POST"])
-@login_required
-def unfollow_user(username):
-    """Current user in g.current_user unfollows <username>."""
-    me = g.current_user
-    if username not in users:
-        return jsonify({"error": "User not found."}), 404
-    if username == me:
-        return jsonify({"error": "Cannot unfollow yourself."}), 400
-
-    if username not in users[me]["following"]:
-        return jsonify({"error": "Not following."}), 409
-
-    users[me]["following"].remove(username)
-    users[username]["followers"].remove(me)
-    save_users()
-    return jsonify({"status": f"You have unfollowed {username}"}), 200
-
-@app.route("/following", methods=["GET"])
-@login_required
-def get_following():
-    """List users that current user is following."""
-    me = g.current_user
-    return jsonify({"following": users[me].get("following", [])}), 200
-
-@app.route("/followers", methods=["GET"])
-@login_required
-def get_followers():
-    """List users that follow current user."""
-    me = g.current_user
-    return jsonify({"followers": users[me].get("followers", [])}), 200
-
 
 @app.route("/profile", methods=["PUT"])
 @login_required
 def update_profile():
-    uname = g.current_user
-    user = users.get(uname)
-    if not user:
-        return jsonify({"error":"User not found"}), 404
-
+    user = g.current_user
     data = request.json or {}
-    # Only these fields can be updated manually
     if "avatar_url" in data:
-        user["avatar_url"] = data["avatar_url"]
+        user.avatar_url = data["avatar_url"]
     if "bio" in data:
-        user["bio"] = data["bio"]
+        user.bio = data["bio"]
+    db.session.commit()
+    return jsonify({"status": "profile updated"}), 200
 
-    save_users()
-    return jsonify({
-        "status": "profile updated",
-        "profile": {
-            "username":   uname,
-            "avatar_url": user["avatar_url"],
-            "bio":        user["bio"],
-            "badges":     user["badges"]
-        }
-    }), 200
+@app.route("/follow/<username>", methods=["POST"])
+@login_required
+def follow_user(username):
+    me = g.current_user
+    target = User.query.get(username)
+    if not target:
+        return jsonify({"error": "User not found."}), 404
+    if target.username == me.username:
+        return jsonify({"error": "Cannot follow yourself."}), 400
+    # già seguo?
+    if me.following.filter_by(username=target.username).first():
+        return jsonify({"error": "Already following."}), 400
+
+    me.following.append(target)
+    db.session.commit()
+    return jsonify({"status": f"Now following {username}"}), 200
 
 
+@app.route("/unfollow/<username>", methods=["POST"])
+@login_required
+def unfollow_user(username):
+    me = g.current_user
+    target = User.query.get(username)
+    if not target:
+        return jsonify({"error": "User not found."}), 404
+    if not me.following.filter_by(username=target.username).first():
+        return jsonify({"error": "Not following."}), 400
 
-@app.route("/login", methods=["POST"])
-def login():
-    data     = request.json or {}
-    username = data.get("username")
-    password = data.get("password")
+    me.following.remove(target)
+    db.session.commit()
+    return jsonify({"status": f"Unfollowed {username}"}), 200
 
+
+@app.route("/<username>/followers", methods=["GET"])
+def list_followers(username):
     user = User.query.get(username)
     if not user:
-        return jsonify({"error": "invalid credentials"}), 401
+        return jsonify({"error": "User not found."}), 404
+    data = [u.username for u in user.followers]
+    return jsonify({"followers": data}), 200
 
-    # verification Argon2
-    try:
-        ph.verify(user.password_hash, password)
-    except exceptions.VerifyMismatchError:
-        return jsonify({"error": "invalid credentials"}), 401
 
-    # re-hash if needed
-    if ph.check_needs_rehash(user.password_hash):
-        user.password_hash = ph.hash(password)
-        db.session.commit()
+@app.route("/<username>/following", methods=["GET"])
+def list_following(username):
+    user = User.query.get(username)
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+    data = [u.username for u in user.following]
+    return jsonify({"following": data}), 200
 
-    # create and save a new token
-    user.token = uuid.uuid4().hex
-    db.session.commit()
-
-    return jsonify({"token": user.token}), 200
-
-# --- Post creation & duel endpoints -----------------
-@app.route("/create_post/<post_id>", methods=["POST"])
+@app.route("/create_post", methods=["POST"])
 @login_required
-def create_post(post_id):
-    body = request.json.get("body")
-    author = g.current_user
+def create_post():
+    user = g.current_user
+    data = request.json or {}
+    body = data.get("body")
     if not body:
         return jsonify({"error": "Field 'body' is required."}), 400
 
-    posts[post_id] = {
-        "author": author,
-        "body": body,
-        "comments": {},
-        "commenters": [],
-        "votes": {},
-        "voted_users": [],
-        "flags": [],
-        "likes": []
-    }
-    save_data()
-    return jsonify({"status": "Post created."}), 200
+    post = Post(
+        id=str(uuid.uuid4()),
+        author_id=user.username,
+        body=body
+    )
+    db.session.add(post)
+    db.session.commit()
+    return jsonify({"status": "Post created."}), 201
+
+@app.route("/comment/<post_id>", methods=["POST"])
+@login_required
+def add_comment(post_id):
+    user = g.current_user
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({"error": "Post not found."}), 404
+
+    data = request.json or {}
+    text = data.get("text")
+    if not text:
+        return jsonify({"error": "Field 'text' is required."}), 400
+
+    comment = Comment(post_id=post.id, author_id=user.username, text=text)
+    BadgeService(db.session).award_badge(g.current_user, "First Blood")
+    db.session.add(comment)
+    db.session.commit()
+    # award "First blood" badge for the first comment on a post
+    badge_service.award_badge(user, "First blood")
+    # award "Eloquent Speaker"
+    from sqlalchemy import func
+    total_long_comments = (
+    db.session.query(func.count(Comment.id))
+    .filter(func.length(Comment.text) >= 100)
+    .scalar()
+    )
+    if total_long_comments >= 20:
+        badge_service.award_badge(user, "Eloquent Speaker")
+        return jsonify({"status": "Comment added."}), 201
+
+@app.route("/vote/<post_id>", methods=["POST"])
+@login_required
+def vote(post_id):
+    user = g.current_user
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({"error": "Post not found."}), 404
+
+    data = request.json or {}
+    candidate_id = data.get("candidate")
+    if not candidate_id:
+        return jsonify({"error": "Candidate is required."}), 400
+
+    candidate = User.query.filter_by(username=candidate_id).first()
+    if not candidate or not Comment.query.filter_by(post_id=post_id, author_id=candidate_id).first():
+        return jsonify({"error": f"Candidate '{candidate_id}' has not commented."}), 400
+
+    if Vote.query.filter_by(post_id=post_id, voter_id=user.username).first():
+        return jsonify({"error": "You have already voted."}), 403
+
+    new_vote = Vote(post_id=post_id, voter_id=user.username, candidate_id=candidate_id)
+    db.session.add(new_vote)
+    db.session.commit()
+    # award "First Responder" to the first vote to every user
+    badge_service.award_badge(user, "First Responder")
+    # award "Popular Debater" to the candidate asa soon as it reaches 10 total votes
+    total_votes_for_candidate = (
+        db.session.query(func.count(Vote.id))
+        .filter(Vote.candidate_id == candidate_id)
+        .scalar()
+    )
+    if total_votes_for_candidate >= 10:
+        # load candidate
+        candidate_user = User.query.get(candidate_id)
+        badge_service.award_badge(candidate_user, "Popular Debater")
+
+
+    return jsonify({"status": f"{user.username} voted for {candidate_id}"}), 200
+
+@app.route("/flag/<post_id>", methods=["POST"])
+@login_required
+def flag_post(post_id):
+    user = g.current_user
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({"error": "Post not found."}), 404
+
+    post.flags += 1
+    db.session.commit()
+    return jsonify({"status": "Post flagged."}), 200
+
+@app.route("/like/<post_id>", methods=["POST"])
+@login_required
+def like_post(post_id):
+    user = g.current_user
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({"error": "Post not found."}), 404
+
+    post.likes += 1
+    db.session.commit()
+    return jsonify({"status": "Post liked."}), 200
+
+# --- Duel control endpoints -------------------------
 
 @app.route("/start_duel/<post_id>", methods=["POST"])
 @login_required
 def start_duel(post_id):
-    post = posts.get(post_id)
+    post = Post.query.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
 
-    if len(post["commenters"]) < 1:
+    # Ensure there is at least one comment before starting the duel
+    if not post.comments:
         return jsonify({"error": "Not enough comments to start duel."}), 400
 
-    ranking = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
-    winner = ranking[0][0]
-    second = ranking[1][0] if len(ranking) > 1 else None
-
-    post["winner"]    = winner
-    post["second"]    = second
-    post["postponed"] = False
-    post["started"]   = False
-
-    scheduler.add_job(
-        handle_duel_timeout,
-        'date',
-        run_date=datetime.now() + timedelta(hours=2),
-        args=[post_id]
+    # Count votes per candidate
+    from sqlalchemy import func
+    votes_data = (
+        db.session.query(
+            Vote.candidate_id,
+            func.count(Vote.id).label("vote_count")
+        )
+        .filter(Vote.post_id == post_id)
+        .group_by(Vote.candidate_id)
+        .all()
     )
+    if not votes_data:
+        return jsonify({"error": "No votes cast."}), 400
 
-    # award "Baptism of Fire" badge for first duel
-    award_badge(winner, "Baptism of Fire")
+    # Sort candidates by vote count descending
+    votes_sorted = sorted(votes_data, key=lambda x: x.vote_count, reverse=True)
+    winner = votes_sorted[0].candidate_id
+    second = votes_sorted[1].candidate_id if len(votes_sorted) > 1 else None
 
-    # —— CRITIQUE MASTER LOGIC ——   
-    votes_for_winner = post["votes"].get(winner, 0)
-    total_votes = sum(post["votes"].values())
-    if total_votes > 0 and (votes_for_winner / total_votes) >= 0.60:
-        # increment their “quality wins” counter
-        quality_wins = users[winner].setdefault("quality_duel_wins", 0) + 1
-        users[winner]["quality_duel_wins"] = quality_wins
-        save_users()
+    # Update post with duel result
+    post.winner_id  = winner
+    post.second_id  = second
+    post.started    = True
+    post.postponed  = False
+    db.session.commit()
 
-        # award "Great Debater"
-        if quality_wins == 5:
-            award_badge(winner, "Great Debater")
-    save_data()
+    # Award a badge to the winner for their first duel
+    badge_service.award_badge(User.query.get(winner), "Baptism of Fire")
+
     return jsonify({
         "status": "Duel started.",
         "winner": winner,
@@ -416,227 +446,27 @@ def start_duel(post_id):
     }), 200
 
 
-# award "Marathoner"
-win_count = sum(1 for p in posts.values() if p.get("winner") == winner)
-if win_count >= 100:
-    award_badge(winner, "Marathoner Legend")
-elif win_count >= 50:
-    award_badge(winner, "Marathoner III")
-elif win_count >= 10:
-    award_badge(winner, "Marathoner II")
-elif win_count >= 5:
-    award_badge(winner, "Marathoner I")
-
-
-@app.route("/start_now/<post_id>", methods=["POST"])
-@login_required
-def user_started(post_id):
-    post = posts.get(post_id)
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-    post["started"] = True
-    save_data()
-    return jsonify({"status": "Duel started."}), 200
-
-# --- Comment & vote endpoints -----------------------
-@app.route("/comment/<post_id>", methods=["POST"])
-@login_required
-def add_comment(post_id):
-    post = posts.get(post_id)
-    commenter = g.current_user
-    text = request.json.get("text")
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-    if not text:
-        return jsonify({"error": "Field 'text' is required."}), 400
-    if commenter in post["commenters"]:
-        return jsonify({"error": f"User '{commenter}' has already commented."}), 403
-
-    post["comments"][commenter] = text
-    post["commenters"].append(commenter)
-
-    save_data()
-
-    # award "First blood" badge for first commenter on a post
-    award_badge(commenter, "First blood")
-
-    long_comments = sum(
-        1 for txt in post["comments"].values() 
-        if len(txt) >= 100
-    )
-    total_long_comments = sum(
-    1 for p in posts.values() 
-      for txt in p["comments"].values() 
-      if len(txt) >= 100
-    )
-    if total_long_comments >= 20:
-        award_badge(commenter, "Eloquent Speaker")
-
-
-    return jsonify({
-        "status": "Comment added.",
-        "comment": {"commenter": commenter, "text": text}
-    }), 200
-
-@app.route("/comments/<post_id>", methods=["GET"])
-@login_required
-def get_comments(post_id):
-    post = posts.get(post_id)
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-
-    comments = []
-    for c in post["commenters"]:
-        comments.append({
-            "commenter": c,
-            "text": post["comments"][c],
-            "votes": post["votes"].get(c, 0)
-        })
-    return jsonify({"comments": comments}), 200
-
-@app.route("/vote/<post_id>", methods=["POST"])
-@login_required
-def vote(post_id):
-    post = posts.get(post_id)
-    voter = g.current_user
-    candidate = request.json.get("candidate")
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-    if candidate not in post["commenters"]:
-        return jsonify({"error": f"Candidate '{candidate}' has not commented."}), 400
-    if voter in post["voted_users"]:
-        return jsonify({"error": f"User '{voter}' has already voted."}), 403
-
-    post["votes"][candidate] = post["votes"].get(candidate, 0) + 1
-    post["voted_users"].append(voter)
-
-    sorted_votes = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
-    post["winner"] = sorted_votes[0][0]
-    post["second"] = sorted_votes[1][0] if len(sorted_votes) > 1 else None
-
-    save_data()
-    
-    # award "First Responder" badge for first voter
-    award_badge(voter, "First Responder")
-    total_votes_for_candidate = sum(
-        p["votes"].get(candidate, 0)
-        for p in posts.values()
-    )
-    if total_votes_for_candidate >= 10:
-        award_badge(candidate, "Popular Debater")
-   
-    return jsonify({
-        "message": f"{voter} voted for {candidate}",
-        "votes": post["votes"]
-    }), 200
-
-# --- Flag & like endpoints -------------------------
-@app.route("/flag/<post_id>", methods=["POST"])
-@login_required
-def flag_post(post_id):
-    data = request.json or {}
-    flagger = g.current_user
-    post = posts.get(post_id)
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-
-    winner = post.get("winner")
-    if not winner:
-        return jsonify({"error": "No winner to flag."}), 400
-
-    post.setdefault("flags", [])
-    post.setdefault("likes", [])
-
-    if flagger in post["flags"]:
-        return jsonify({"error": f"User '{flagger}' has already flagged the winner."}), 403
-
-    post["flags"].append(flagger)
-
-    winner_votes = post["votes"].get(winner, 0)
-    flag_count   = len(post["flags"])
-    like_count   = len(post["likes"])
-    net_flags    = max(0, flag_count - like_count)
-    flag_ratio   = (net_flags / winner_votes) if winner_votes > 0 else 0
-
-    if flag_ratio >= 0.6:
-        post["started"] = False
-        second = post.get("second")
-        if second:
-            post["winner"] = second
-            result = {
-                "status": "Duel interrupted due to net flags on winner.",
-                "switched_to": second
-            }
-            scheduler.add_job(
-                handle_duel_timeout,
-                'date',
-                run_date=datetime.now() + timedelta(hours=2),
-                args=[post_id]
-            )
-        else:
-            result = {
-                "status": "Duel interrupted but no second user available.",
-                "switched_to": None
-            }
-
-        post["flags"] = []
-        post["likes"] = []
-        post["postponed"] = False
-        save_data()
-        return jsonify(result), 200
-
-    save_data()
-    return jsonify({
-        "status": f"Flag registered on '{winner}'. Net flags: {net_flags}/{winner_votes}."
-    }), 200
-
-@app.route("/like/<post_id>", methods=["POST"])
-@login_required
-def like_post(post_id):
-    data = request.json or {}
-    liker = g.current_user
-    post = posts.get(post_id)
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-
-    winner = post.get("winner")
-    if not winner:
-        return jsonify({"error": "No winner to like."}), 400
-
-    post.setdefault("likes", [])
-    if liker in post["likes"]:
-        return jsonify({"error": f"User '{liker}' has already liked the winner."}), 403
-
-    post["likes"].append(liker)
-    save_data()
-    return jsonify({
-        "status": f"Like registered on '{winner}'. Total likes: {len(post['likes'])}"
-    }), 200
-
-# --- Read endpoints --------------------------------
 @app.route("/status/<post_id>", methods=["GET"])
+@login_required
 def get_status(post_id):
-    post = posts.get(post_id)
+    post = Post.query.get(post_id)
     if not post:
         return jsonify({"error": "Post not found."}), 404
-    return jsonify(post), 200
 
-@app.route("/results/<post_id>", methods=["GET"])
-def get_results(post_id):
-    post = posts.get(post_id)
-    if not post:
-        return jsonify({"error": "Post not found."}), 404
-    ranking = sorted(post["votes"].items(), key=lambda x: x[1], reverse=True)
+    # Return the current status of the duel
     return jsonify({
-        "body": post["body"],
-        "ranking": ranking,
-        "winner": post.get("winner"),
-        "second": post.get("second")
+        "post_id":   post.id,
+        "started":   post.started,
+        "postponed": post.postponed,
+        "winner":    post.winner_id,
+        "second":    post.second_id,
+        "flags":     post.flags,
+        "likes":     post.likes
     }), 200
 
-# --- App runner -----------------------------------
+
+# --- Main ---
 if __name__ == "__main__":
     with app.app_context():
-        print("📦 Creating database tables…")
         db.create_all()
     app.run(debug=True, use_reloader=False)
