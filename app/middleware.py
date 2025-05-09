@@ -1,6 +1,6 @@
 from flask import request, g
+from app import db  # Import db correctly
 from app.models.models import User
-from app import db
 
 def authenticate_user():
     """Middleware to authenticate user and set g.current_user."""
