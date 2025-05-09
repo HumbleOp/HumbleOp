@@ -16,7 +16,7 @@ class User(db.Model):
     # Columns
     username = db.Column(db.String, primary_key=True)
     password_hash = db.Column(db.String, nullable=False)
-    token = db.Column(db.String, unique=True)
+    token = db.Column(db.String, unique=True, index=True)  # Indexed for faster lookup
     avatar_url = db.Column(db.String, default='')
     bio = db.Column(db.String, default='')
 
