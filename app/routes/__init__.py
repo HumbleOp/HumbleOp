@@ -8,6 +8,7 @@ from app.routes.comment_routes import comment_bp
 from app.routes.vote_routes import vote_bp
 from app.routes.interaction_routes import interaction_bp
 from app.routes.profile_routes import profile_bp
+from app.routes.user_routes import user_bp
 
 # Set up logging for blueprint registration
 logging.basicConfig(level=logging.INFO)
