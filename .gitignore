@@ -1,5 +1,7 @@
 # Python bytecode
 __pycache__/
+/OldHumble/
+/HumbleOp.egg-info/
 *.py[cod]
 *$py.class
 
