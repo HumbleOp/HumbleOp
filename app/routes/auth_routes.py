@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
 from argon2 import PasswordHasher, exceptions
+from app.models import db, User
 import uuid
 
 auth_bp = Blueprint("auth", __name__)

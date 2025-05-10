@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, g
+from app.middleware import require_authentication
 from app.utils.data_utils import save_data
 
 interaction_bp = Blueprint("interactions", __name__)
@@ -7,6 +8,10 @@ posts = {}  # Replace with actual data loading logic
 
 @interaction_bp.route("/flag/<post_id>", methods=["POST"])
 def flag_post(post_id):
+    auth_response = require_authentication()
+    if auth_response:  # If user is not authenticated, return the response
+        return auth_response
+
     post = posts.get(post_id)
     flagger = g.current_user
     if not post:
