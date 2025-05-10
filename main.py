@@ -6,6 +6,7 @@ from app.routes.auth_routes import auth_bp
 from app.routes.post_routes import post_bp
 from app.routes.interaction_routes import interaction_bp
 from app.routes.profile_routes import profile_bp
+from app.routes.user_routals import user_bp
 from app.middleware import authenticate_user
 
 
@@ -28,7 +29,7 @@ def create_app():
     app.register_blueprint(post_bp, url_prefix="/posts")
     app.register_blueprint(interaction_bp, url_prefix="/interactions")
     app.register_blueprint(profile_bp, url_prefix="/profile")
-    
+    app.register_blueprint(user_bp, url_prefix="/users")
     # Error handlers
     @app.errorhandler(404)
     def not_found_error(e):
