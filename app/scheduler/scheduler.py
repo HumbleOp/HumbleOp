@@ -1,21 +1,25 @@
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from datetime import datetime, timedelta
-from app.utils.data_utils import save_data
+from flask import Flask
+from app.models.models import db, Post
 
-scheduler = BackgroundScheduler()
+def check_postponed_duels():
+    """Auto-start duels that have been postponed more than 30m."""
+    # we assume this is always called *inside* an application context
+    now = datetime.utcnow()
+    for post in Post.query.filter_by(postponed=True):
+        if post.updated_at + timedelta(minutes=30) <= now:
+            post.postponed = False
+            post.started   = True
+    db.session.commit()
 
-def handle_duel_timeout(post_id, posts):
-    post = posts.get(post_id)
-    if not post or post.get("started"):
-        return
-
-    if not post.get("postponed"):
-        post["postponed"] = True
-        scheduler.add_job(handle_duel_timeout, 'date', run_date=datetime.now() + timedelta(hours=6), args=[post_id, posts])
-    else:
-        post["winner"] = post.get("second")
-        post["postponed"] = False
-        post["started"] = False
-        scheduler.add_job(handle_duel_timeout, 'date', run_date=datetime.now() + timedelta(hours=2), args=[post_id, posts])
-
-    save_data(posts, "data.json")
+def init_scheduler(app: Flask):
+    jobstores = {
+        'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
+    }
+    sched = BackgroundScheduler(jobstores=jobstores)
+    # schedule your job
+    sched.add_job(check_postponed_duels, 'interval', minutes=1)
+    sched.start()
+    return sched
