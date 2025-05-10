@@ -31,9 +31,9 @@ def migrate():
             avatar_url    = u.get("avatar_url", ""),
             bio           = u.get("bio", "")
         )
-        db.session.add(user)
+        db.session.bulk_save_objects(user)
         for badge_name in u.get("badges", []):
-            db.session.add(Badge(user=uname, name=badge_name))
+            db.session.bulk_save_objects(Badge(user=uname, name=badge_name))
     db.session.commit()
 
     # 2) Migra i follows (many-to-many)
@@ -59,11 +59,11 @@ def migrate():
             winner    = p.get("winner"),
             second    = p.get("second")
         )
-        db.session.add(post)
+        db.session.bulk_save_objects(post)
 
         # Commenti
         for c in p.get("comments", {}).values():
-            db.session.add(Comment(
+            db.session.bulk_save_objects(Comment(
                 post_id   = pid,
                 commenter = c["commenter"],
                 text      = c["text"]
@@ -72,13 +72,13 @@ def migrate():
         # Voti (uno per ogni conteggio)
         for voter, count in p.get("votes", {}).items():
             for _ in range(count):
-                db.session.add(Vote(post_id=pid, voter=voter, candidate=voter))
+                db.session.bulk_save_objects(Vote(post_id=pid, voter=voter, candidate=voter))
 
         # Flags e Likes
         for f_user in p.get("flags", []):
-            db.session.add(Flag(post_id=pid, flagger=f_user))
+            db.session.bulk_save_objects(Flag(post_id=pid, flagger=f_user))
         for l_user in p.get("likes", []):
-            db.session.add(Like(post_id=pid, liker=l_user))
+            db.session.bulk_save_objects(Like(post_id=pid, liker=l_user))
 
     db.session.commit()
     print("🎉 Migrazione completata!")
