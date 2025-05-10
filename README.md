@@ -43,3 +43,48 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python humblecore.py
+
+Then open http://localhost:5000 and start dueling.
+
+
+---
+
+Built With
+
+Python + Flask
+
+SQLite + SQLAlchemy
+
+Argon2id password hashing
+
+RESTful API
+
+
+
+---
+
+Upcoming Features
+
+[x] Posts + one-shot comments
+
+[x] Voting + timed duels
+
+[x] Flag/like moderation
+
+[x] Profiles + social graph
+
+[ ] Post tags & categories
+
+[ ] Stripe-based Pro tiers
+
+[ ] Activity feed
+
+[ ] Public duels archive
+
+Stay in the loop
+
+> Sign up for early access and updates (coming soon)
+
+
+
+Made with thought — not noise.
