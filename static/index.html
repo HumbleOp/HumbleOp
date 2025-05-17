@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HumbleOp – Debate Arena</title>
+  <link rel="icon" href="/static/logo.png">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: url('/static/logo.png') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      backdrop-filter: blur(6px);
+    }
+    header {
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      padding: 2em;
+      text-align: center;
+      border-bottom: 2px solid #333;
+    }
+    header img {
+      max-height: 60px;
+      vertical-align: middle;
+    }
+    header h1 {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 2.5em;
+      vertical-align: middle;
+    }
+    header p {
+      margin-top: 0.5em;
+      font-size: 1.2em;
+      opacity: 0.8;
+    }
+    section {
+      max-width: 800px;
+      margin: auto;
+      padding: 3em 2em;
+      background-color: rgba(0, 0, 0, 0.75);
+      border-radius: 1em;
+      margin-top: 2em;
+    }
+    h2 {
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.5em;
+    }
+    .cta {
+      background: #e63946;
+      color: #fff;
+      padding: 1em 2em;
+      text-align: center;
+      margin-top: 2em;
+      border-radius: 0.5em;
+    }
+    .cta a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1.3em;
+    }
+    .changelog {
+      margin-top: 3em;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 1em;
+      border-radius: 0.5em;
+    }
+    .changelog h3 {
+      margin-top: 0;
+    }
+    .changelog ul {
+      padding-left: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="HumbleOp Logo">
+    <h1>HumbleOp</h1>
+    <p>The Arena of Ideas</p>
+  </header>
+
+  <section>
+    <h2>💥 Welcome to the Duel</h2>
+    <p>
+      HumbleOp is not a forum. It's a combat arena for minds.
+      One post. One comment per user. A single vote decides who faces the original poster in a timed duel.
+      You win by clarity, presence, and substance — not followers.
+    </p>
+
+    <h2>🎯 Gamified Meritocracy</h2>
+    <p>
+      Earn real badges by debating, voting, and showing up. No fluff.
+      Want "Popular Debater" or "The Great Debater"? Earn it. Every point counts.
+    </p>
+
+    <h2>🧠 Transparent, Community-Enforced Logic</h2>
+    <p>
+      Flag a weak winner? Like a solid response? The platform adjusts. Winners can be swapped if flagged too much.
+      No mods. No bias. Just logic.
+    </p>
+
+    <div class="cta">
+      <p>⚔️ Ready to enter the arena?</p>
+      <a href="http://localhost:5000">Start Dueling</a>
+    </div>
+
+    <div class="changelog">
+      <h3>📜 Changelog</h3>
+      <ul>
+        <li><strong>v0.1 MVP</strong> – Duel logic, voting, profile system, and avatar upload</li>
+        <li><strong>v0.2</strong> – Flag/like moderation + badge achievements</li>
+        <li><strong>v0.3 (next)</strong> – Tags, categories, media support, Pro tiers</li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>
