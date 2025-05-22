@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HumbleOp – Debate Arena</title>
+  <link rel="icon" href="logo.png">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: url('logo.png') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      backdrop-filter: blur(6px);
+    }
+    header {
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      padding: 2em;
+      text-align: center;
+      border-bottom: 2px solid #333;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+    header img {
+      max-height: 60px;
+      vertical-align: middle;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+    header h1 {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 2.7em;
+      vertical-align: middle;
+      letter-spacing: 2px;
+      text-shadow: 1px 1px 2px #000;
+    }
+    header p {
+      margin-top: 0.5em;
+      font-size: 1.2em;
+      opacity: 0.8;
+      text-shadow: 1px 1px 2px #000;
+    }
+    section {
+      max-width: 900px;
+      margin: auto;
+      padding: 3em 2em;
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 1em;
+      margin-top: 2em;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      animation: fadeIn 1.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h2 {
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.5em;
+      margin-top: 2em;
+      font-size: 1.6em;
+    }
+    p {
+      line-height: 1.6;
+    }
+    .cta {
+      background: linear-gradient(135deg, #e63946, #f27121);
+      color: #fff;
+      padding: 1.2em 2em;
+      text-align: center;
+      margin-top: 2.5em;
+      border-radius: 0.7em;
+      transition: transform 0.3s ease;
+    }
+    .cta:hover {
+      transform: scale(1.03);
+    }
+    .cta a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1.4em;
+    }
+    .changelog {
+      margin-top: 3em;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 1em;
+      border-radius: 0.5em;
+      box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+    .changelog h3 {
+      margin-top: 0;
+    }
+    .changelog ul {
+      padding-left: 1.2em;
+    }
+    .changelog li {
+      margin-bottom: 0.5em;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="HumbleOp Logo">
+    <h1>HumbleOp</h1>
+    <p>The Arena of Ideas</p>
+  </header>
+
+  <section>
+    <h2>💥 Welcome to the Duel</h2>
+    <p>
+      HumbleOp is not a forum. It's a combat arena for minds.
+      One post. One comment per user. A single vote decides who faces the original poster in a timed duel.
+      You win by clarity, presence, and substance — not followers.
+    </p>
+
+    <h2>🎯 Gamified Meritocracy</h2>
+    <p>
+      Earn real badges by debating, voting, and showing up. No fluff.
+      Want "Popular Debater" or "The Great Debater"? Earn it. Every point counts.
+    </p>
+
+    <h2>🧠 Transparent, Community-Enforced Logic</h2>
+    <p>
+      Flag a weak winner? Like a solid response? The platform adjusts. Winners can be swapped if flagged too much.
+      No mods. No bias. Just logic.
+    </p>
+
+    <div class="cta">
+      <p>⚔️ Ready to enter the arena?</p>
+      <a href="http://localhost:5000">Start Dueling</a>
+    </div>
+
+    <div class="changelog">
+      <h3>📜 Changelog</h3>
+      <ul>
+        <li><strong>v0.1 MVP</strong> – Duel logic, voting, profile system, and avatar upload</li>
+        <li><strong>v0.2</strong> – Flag/like moderation + badge achievements</li>
+        <li><strong>v0.3 (next)</strong> – Tags, categories, media support, Pro tiers</li>
+      </ul>
+    </div>
+  </section>
+  <footer style="background: rgba(0, 0, 0, 0.85); text-align: center; padding: 2em; margin-top: 4em; font-size: 0.9em; color: #ccc; border-top: 1px solid #444;">
+    <p>&copy; 2025 HumbleOp. All duels logged. All voices earned.</p>
+    <p>Made with clarity, not clout.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[TODO]
+
+[HIGH] Add search functionality (posts and users) DONE
+[HIGH] Implement tag system for posts (categories or hashtags) DONE
+[MEDIUM] Resize profile images or enforce upload size limit (e.g., max 2MB)
+[HIGH] Support media in posts:   DONE
+        - Image upload
+        - Video URL embedding (e.g., YouTube)
