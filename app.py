@@ -4,6 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
 from core.extensions import db, scheduler
 
+if os.getenv("DATABASE_URL", "").startswith("postgresql://"):
+    from wait_for_postgres import wait_for_postgres
+    wait_for_postgres()
+
 # Factory
 
 def create_app(config=None):

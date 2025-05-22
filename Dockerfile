@@ -22,3 +22,7 @@ COPY . .
 
 # Start app
 CMD ["flask", "run"]
+
+
+# Wait fo postgres
+COPY wait_for_postgres.py ./
