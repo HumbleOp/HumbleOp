@@ -1,4 +1,4 @@
-name: Run Tests
+name: Run E2E Tests
 
 on:
   push:
@@ -12,15 +12,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+    - name: Set up Docker Compose
+      run: docker-compose up -d --build
 
-    - name: Install dependencies
+    - name: Wait for Flask
       run: |
-        pip install --upgrade pip
-        pip install -r dev-requirements.txt
+        echo "Waiting for Flask to start..."
+        for i in {1..10}; do
+          curl -s http://localhost:5000/status/test || true
+          if curl -s http://localhost:5000/status/test | grep -q '"data"'; then
+            echo "Server is up!"
+            break
+          fi
+          sleep 3
+        done
 
     - name: Run tests
-      run: pytest
+      run: docker-compose exec -T web pytest tests_e2e

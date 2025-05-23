@@ -21,7 +21,7 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY . .
 
 # Start app
-CMD ["flask", "run"]
+ENTRYPOINT ["sh", "-c", "python wait_for_postgres.py && exec flask run"]
 
 
 # Wait fo postgres
