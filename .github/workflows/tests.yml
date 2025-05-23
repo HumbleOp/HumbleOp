@@ -28,4 +28,4 @@ jobs:
         done
 
     - name: Run tests
-      run: docker-compose exec -T web pytest tests_e2e
+      run: docker compose exec -T web pytest tests_e2e
