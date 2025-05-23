@@ -46,6 +46,9 @@ def create_app(config=None):
     app.register_blueprint(tag_bp)
     app.config["UPLOAD_FOLDER"] = "static/avatars"
 
+    @app.route("/")
+    def index():
+        return "HumbleOp è attivo!"
     return app
 
 
@@ -54,3 +57,5 @@ if __name__ == "__main__":
     with app.app_context():
         scheduler.start()
     app.run(debug=True)
+
+
