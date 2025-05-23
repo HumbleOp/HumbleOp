@@ -12,20 +12,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Docker Compose
-      run: docker-compose up -d --build
+    - name: Avvia i servizi con Docker Compose
+      run: docker compose up -d --build
 
-    - name: Wait for Flask
+    - name: Attendi che Flask sia pronto
       run: |
-        echo "Waiting for Flask to start..."
+        echo "Aspetto che il server Flask risponda..."
         for i in {1..10}; do
           curl -s http://localhost:5000/status/test || true
           if curl -s http://localhost:5000/status/test | grep -q '"data"'; then
-            echo "Server is up!"
+            echo "Flask è pronto!"
             break
           fi
           sleep 3
         done
 
-    - name: Run tests
+    - name: Esegui i test E2E
       run: docker compose exec -T web pytest tests_e2e
