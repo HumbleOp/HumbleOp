@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from flasgger import Swagger
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
 from core.extensions import db, scheduler
@@ -12,6 +13,20 @@ if os.getenv("DATABASE_URL", "").startswith("postgresql://"):
 
 def create_app(config=None):
     app = Flask(__name__, instance_relative_config=True)
+
+    app.config['SWAGGER'] = {
+        'title': 'HumbleOp API',
+        'uiversion': 3,
+        'securityDefinitions': {
+            'BearerAuth': {
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'in': 'header'
+            }
+        },
+        'security': [{'BearerAuth': []}]
+    }
+    Swagger(app)
 
     db_uri = os.getenv("DATABASE_URL")
     if not db_uri:

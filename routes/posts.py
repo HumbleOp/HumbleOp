@@ -28,6 +28,38 @@ def login_required(f):
 @posts_bp.route("/create_post/<post_id>", methods=["POST"])
 @login_required
 def create_post(post_id):
+    """
+    Create a new post
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: Unique post identifier
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - body
+          properties:
+            body:
+              type: string
+              example: "#Debate Should AI moderate online forums?"
+    responses:
+      200:
+        description: Post created successfully
+      400:
+        description: Missing body field
+      409:
+        description: Post with given ID already exists
+    """
     from routes.tag import extract_tags
 
     body = request.json.get("body")
@@ -59,6 +91,40 @@ def create_post(post_id):
 @posts_bp.route("/comment/<post_id>", methods=["POST"])
 @login_required
 def add_comment(post_id):
+    """
+    Add a comment to a post
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post to comment on
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - text
+          properties:
+            text:
+              type: string
+              example: "I think this idea has potential."
+    responses:
+      200:
+        description: Comment added successfully
+      400:
+        description: Missing or invalid input
+      403:
+        description: User has already commented
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -81,6 +147,40 @@ def add_comment(post_id):
 @posts_bp.route("/vote/<post_id>", methods=["POST"])
 @login_required
 def vote(post_id):
+    """
+    Vote for a comment in a post
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post to vote on
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - candidate
+          properties:
+            candidate:
+              type: string
+              example: test1
+    responses:
+      200:
+        description: Vote registered
+      400:
+        description: Candidate has not commented
+      403:
+        description: User has already voted
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -105,6 +205,25 @@ def vote(post_id):
 @posts_bp.route("/start_duel/<post_id>", methods=["POST"])
 @login_required
 def start_duel(post_id):
+    """
+    Force start a duel manually
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post to force-start
+    responses:
+      200:
+        description: Post marked as started
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -142,6 +261,23 @@ def start_duel(post_id):
 
 @posts_bp.route("/status/<post_id>", methods=["GET"])
 def get_status(post_id):
+    """
+    Get current status of a post
+    ---
+    tags:
+      - Posts
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post
+    responses:
+      200:
+        description: Post status returned
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -158,6 +294,23 @@ def get_status(post_id):
 
 @posts_bp.route("/results/<post_id>", methods=["GET"])
 def get_results(post_id):
+    """
+    Get duel results for a post
+    ---
+    tags:
+      - Posts
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post
+    responses:
+      200:
+        description: Vote results and winner
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -173,6 +326,23 @@ def get_results(post_id):
 
 @posts_bp.route("/comments/<post_id>", methods=["GET"])
 def get_comments(post_id):
+    """
+    Get comments for a post with vote counts
+    ---
+    tags:
+      - Posts
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post
+    responses:
+      200:
+        description: List of comments with votes
+      404:
+        description: Post not found
+    """
     if not db.session.get(Post, post_id):
         return error("Post not found.", 404)
     comments = Comment.query.filter_by(post_id=post_id).all()
@@ -186,6 +356,27 @@ def get_comments(post_id):
 @posts_bp.route("/like/<post_id>", methods=["POST"])
 @login_required
 def like(post_id):
+    """
+    Like a post
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post to like
+    responses:
+      200:
+        description: Like registered
+      403:
+        description: User has already liked this post
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -199,6 +390,29 @@ def like(post_id):
 @posts_bp.route("/flag/<post_id>", methods=["POST"])
 @login_required
 def flag(post_id):
+    """
+    Flag a post for review
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post to flag
+    responses:
+      200:
+        description: Flag registered or winner switched
+      400:
+        description: Duel has not started
+      403:
+        description: User has already flagged this post
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)

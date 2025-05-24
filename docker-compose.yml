@@ -7,6 +7,7 @@ services:
       - .:/app
     environment:
       - FLASK_ENV=development
+      - FLASK_APP=app:create_app
       - DATABASE_URL=postgresql://humble:op@db:5432/humbleop
     depends_on:
       - db

@@ -5,6 +5,53 @@ search_bp = Blueprint("search", __name__)
 
 @search_bp.route("/search", methods=["GET"])
 def search():
+    """
+    Search for users or posts
+    ---
+    tags:
+      - Search
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: true
+        description: Search query string
+      - name: type
+        in: query
+        type: string
+        enum: [all, user, post]
+        default: all
+        description: Filter results by type
+      - name: author
+        in: query
+        type: string
+        required: false
+        description: Filter posts by author username
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+        description: Maximum number of results (max 100)
+      - name: sort
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
+        description: Sort order for posts
+    responses:
+      200:
+        description: Search results
+        examples:
+          application/json:
+            users: ["alice", "bob"]
+            posts:
+              - id: "123"
+                author: "bob"
+                body: "example post"
+                media: []
+      400:
+        description: Missing query parameter
+    """
     q = request.args.get("q", "").strip()
     search_type = request.args.get("type", "all")
     author_filter = request.args.get("author")
@@ -37,4 +84,3 @@ def search():
         ]
 
     return jsonify(results), 200
-

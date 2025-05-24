@@ -1,4 +1,4 @@
-import os   
+import os
 from flask import Blueprint, jsonify, request, g
 from models import User
 from core.extensions import db
@@ -27,6 +27,17 @@ def login_required(fn):
 @profile_bp.route("/profile", methods=["GET"])
 @login_required
 def get_profile():
+    """
+    Retrieve current user's profile
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: Profile data
+    """
     user = g.current_user
     return jsonify({
         "username": user.username,
@@ -40,6 +51,32 @@ def get_profile():
 @profile_bp.route("/profile", methods=["PUT"])
 @login_required
 def update_profile():
+    """
+    Update current user's profile
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    consumes:
+      - application/json
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            avatar_url:
+              type: string
+              example: /static/avatars/myavatar.jpg
+            bio:
+              type: string
+              example: Curious about everything.
+    responses:
+      200:
+        description: Profile updated successfully
+    """
     user = db.session.get(User, g.current_user.username)
     data = request.json or {}
     if "avatar_url" in data:
@@ -60,6 +97,26 @@ def update_profile():
 @profile_bp.route("/upload_avatar", methods=["POST"])
 @login_required
 def upload_avatar():
+    """
+    Upload and update user avatar
+    ---
+    tags:
+      - Profile
+    consumes:
+      - multipart/form-data
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: avatar
+        in: formData
+        type: file
+        required: true
+    responses:
+      200:
+        description: Avatar uploaded
+      400:
+        description: Missing or invalid file
+    """
     if "avatar" not in request.files:
         return jsonify({"error": "No file part"}), 400
 
@@ -68,7 +125,6 @@ def upload_avatar():
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
-    # Allowed extensions?
     ext = file.filename.rsplit(".", 1)[-1].lower()
     if "." not in file.filename or ext not in ALLOWED_EXTENSIONS:
         return jsonify({"error": "Invalid file type"}), 400
@@ -76,13 +132,9 @@ def upload_avatar():
     filename = secure_filename(f"{g.current_user.username}.{ext}")
     save_path = os.path.join(UPLOAD_FOLDER, filename)
 
-    # Create folder if it doesn't exist
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-    # File saving
     file.save(save_path)
 
-    # Update profile
     user = db.session.get(User, g.current_user.username)
     user.avatar_url = f"/{UPLOAD_FOLDER}/{filename}"
     db.session.commit()
@@ -92,6 +144,28 @@ def upload_avatar():
 @profile_bp.route("/follow/<username>", methods=["POST"])
 @login_required
 def follow_user(username):
+    """
+    Follow another user
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: username
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: User followed
+      400:
+        description: Invalid request
+      404:
+        description: Target user not found
+      409:
+        description: Already following
+    """
     me = g.current_user
     target = db.session.get(User, username)
     if not target:
@@ -107,6 +181,28 @@ def follow_user(username):
 @profile_bp.route("/unfollow/<username>", methods=["POST"])
 @login_required
 def unfollow_user(username):
+    """
+    Unfollow a user
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: username
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: User unfollowed
+      400:
+        description: Invalid request
+      404:
+        description: User not found
+      409:
+        description: Not currently following
+    """
     me = g.current_user
     target = db.session.get(User, username)
     if not target:
@@ -122,9 +218,31 @@ def unfollow_user(username):
 @profile_bp.route("/followers", methods=["GET"])
 @login_required
 def get_followers():
+    """
+    Get list of current user's followers
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: List of followers
+    """
     return jsonify({"followers": [u.username for u in g.current_user.followers]}), 200
 
 @profile_bp.route("/following", methods=["GET"])
 @login_required
 def get_following():
+    """
+    Get list of users current user is following
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: List of followed users
+    """
     return jsonify({"following": [u.username for u in g.current_user.following]}), 200

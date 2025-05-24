@@ -10,6 +10,41 @@ ph = PasswordHasher(time_cost=2, memory_cost=51200, parallelism=8)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
+    """
+    Register a new user
+    ---
+    tags:
+      - Auth
+    consumes:
+      - application/json
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+            - email
+          properties:
+            username:
+              type: string
+              example: johndoe
+            password:
+              type: string
+              example: secret123
+            email:
+              type: string
+              example: johndoe@example.com
+    responses:
+      201:
+        description: User successfully registered
+      400:
+        description: Missing or invalid input fields
+      409:
+        description: Username or email already exists
+    """
     data = request.json or {}
     u, p, e = data.get('username'), data.get('password'), data.get('email')
 
@@ -29,7 +64,6 @@ def register():
     token = uuid.uuid4().hex
     verify_token = uuid.uuid4().hex
 
-    # 👇 simulazione invio email
     print(f"[FAKE EMAIL] Verify link: /verify/{verify_token}")
 
     user = User(
@@ -47,6 +81,35 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    """
+    Authenticate an existing user
+    ---
+    tags:
+      - Auth
+    consumes:
+      - application/json
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: johndoe
+            password:
+              type: string
+              example: secret123
+    responses:
+      200:
+        description: Login successful, token returned
+      401:
+        description: Invalid credentials
+    """
     data = request.json or {}
     u, p = data.get('username'), data.get('password')
     user = db.session.get(User, u)

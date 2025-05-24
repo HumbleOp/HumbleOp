@@ -3,8 +3,8 @@ import psycopg2
 import os
 from urllib.parse import urlparse
 
-MAX_RETRIES = 10
-WAIT_SECONDS = 1
+MAX_RETRIES = 15
+WAIT_SECONDS = 2
 
 def wait_for_postgres():
     url = os.getenv("DATABASE_URL")
