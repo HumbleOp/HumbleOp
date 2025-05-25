@@ -32,8 +32,11 @@ def evaluate_flags_and_maybe_switch(post):
     net_score = (initial_votes + actual_likes) - total_flags
     threshold_score = initial_votes * NET_SCORE_RATIO
 
+    print(f"[SWITCH?] flags={total_flags}, min={min_flags}, ratio={flag_ratio:.2f}, net={net_score}, threshold={threshold_score}")
+    print(f"[SWITCH?] current winner: {post.winner}, second: {post.second}")
+
     # 4) Decide switch
-    if total_flags >= min_flags and (
+    if post.second and total_flags >= min_flags and (
         flag_ratio > FLAG_RATIO_THRESHOLD or
         net_score <= threshold_score
     ):
@@ -54,6 +57,8 @@ def evaluate_flags_and_maybe_switch(post):
             args=[post.id]
         )
         db.session.commit()
+
+        print(f"[SWITCH] WINNER CHANGED from {old_winner} to {new_winner}")
         return True, old_winner, new_winner
 
     return False, None, None

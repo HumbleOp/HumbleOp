@@ -319,7 +319,7 @@ def vote(post_id):
 @login_required
 def start_duel(post_id):
     """
-    Force start a duel manually
+    Force start a duel manually by computing winner and second
     ---
     tags:
       - Posts
@@ -334,43 +334,54 @@ def start_duel(post_id):
     responses:
       200:
         description: Post marked as started
+      400:
+        description: Not enough comments or votes
       404:
         description: Post not found
     """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
-    commenters = Comment.query.filter_by(post_id=post_id).all()
-    if len(commenters) < 1:
-        return error("Not enough comments to start duel.", 400)
+
     votes = Vote.query.filter_by(post_id=post_id).all()
+    if not votes:
+        return error("No votes found.", 400)
+
     tally = {}
     for v in votes:
         tally[v.candidate] = tally.get(v.candidate, 0) + 1
-    if not tally:
-        return error("No votes found.", 400)
+
     ranking = sorted(tally.items(), key=lambda x: x[1], reverse=True)
     winner, winner_count = ranking[0]
-    iv = winner_count
-    iv = max(iv, MIN_INITIAL_VOTES)
-    iv = min(iv, MAX_INITIAL_VOTES)
-    post.initial_votes = iv
-    second = next((c.commenter for c in commenters if c.commenter != winner), None)
+    second = ranking[1][0] if len(ranking) > 1 else None
+
+    iv = max(min(winner_count, MAX_INITIAL_VOTES), MIN_INITIAL_VOTES)
+
     post.winner = winner
     post.second = second
+    post.initial_votes = iv
     post.started = False
     post.postponed = False
     db.session.commit()
-    scheduler.add_job(handle_duel_timeout, 'date', run_date=datetime.now() + timedelta(hours=2), args=[post_id])
+
+    scheduler.add_job(
+        handle_duel_timeout,
+        'date',
+        run_date=datetime.now() + timedelta(hours=2),
+        args=[post_id]
+    )
+
     award_badge(winner, "Baptism of Fire")
     award_marathoner(winner)
     evaluate_badges(winner)
+
     db.session.commit()
     return success({
         "status": "Duel started.",
         "winner": winner,
         "second": second
     }, 200)
+
 
 @posts_bp.route("/status/<post_id>", methods=["GET"])
 def get_status(post_id):
@@ -540,7 +551,7 @@ def flag(post_id):
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
-    if not post.started or datetime.now() < post.duel_start_time:
+    if not post.started or not post.duel_start_time or datetime.now() < post.duel_start_time:
         return error("Duel has not started yet.", 400)
     flagger = g.current_user.username
     if Flag.query.filter_by(post_id=post_id, flagger=flagger).first():
@@ -550,6 +561,7 @@ def flag(post_id):
     switched, old, new = evaluate_flags_and_maybe_switch(post)
     if switched:
         return success({"status": "Winner switched.", "old": old, "new": new}, 200)
+    print("[DEBUG] SWITCH FLAG? winner=", post.winner)
     return success({"status": "Flag registered."}, 200)
 
 @posts_bp.route("/start_now/<post_id>", methods=["POST"])

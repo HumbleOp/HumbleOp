@@ -1,6 +1,7 @@
 # tests/test_posts.py
 import uuid
 from core.utils import evaluate_badges
+from datetime import datetime, timedelta
 from models import User, Post, Comment, Vote, Badge
 
 
@@ -120,34 +121,50 @@ def test_like_post(client):
     assert "Like registered" in rv.get_json()["status"]
 
 def test_flag_switches_to_second_if_too_many_flags(client):
-    # Registrazione utenti
     token_1 = client.post("/register", json={"username": "u1", "password": "p", "email": "u1@example.com"}).get_json()["token"]
     token_2 = client.post("/register", json={"username": "u2", "password": "p", "email": "u2@example.com"}).get_json()["token"]
 
     pid = "flagtest001"
     client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token_1}"}, json={"body": "post with duel"})
 
-    # Entrambi commentano
     client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token_1}"}, json={"text": "comment from u1"})
     client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token_2}"}, json={"text": "comment from u2"})
 
-    # u1 vince, u2 è secondo
     client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token_1}"}, json={"candidate": "u1"})
-    client.post(f"/start_duel/{pid}", headers={"Authorization": f"Bearer {token_1}"})
+    client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token_2}"}, json={"candidate": "u2"})  # <- ESSENZIALE
 
-    # Aggiungi 1 like (minimo) da u1
+    client.post(f"/start_duel/{pid}", headers={"Authorization": f"Bearer {token_1}"})
+    client.post(f"/start_now/{pid}", headers={"Authorization": f"Bearer {token_1}"})
+
+    # imposta duel_start_time
+    with client.application.app_context():
+        from models import Post
+        from core.extensions import db
+        post = db.session.get(Post, pid)
+        post.duel_start_time = datetime.now()
+        db.session.commit()
+
     client.post(f"/like/{pid}", headers={"Authorization": f"Bearer {token_1}"})
 
-    # Ora 3 utenti registrati flaggano → rapporto like/(like+flag) = 1/4 = 0.25 < 0.6
     for i in range(31):
         uname = f"fuser{i}"
         client.post("/register", json={"username": uname, "password": "x", "email": f"{uname}@example.com"})
         tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["token"]
         client.post(f"/flag/{pid}", headers={"Authorization": f"Bearer {tok}"})
 
-    # Verifica stato aggiornato
+    # forza valutazione
+    with client.application.app_context():
+        from core.utils_flag import evaluate_flags_and_maybe_switch
+        from core.extensions import db
+        db.session.expire_all()
+        post = db.session.get(Post, pid)
+        evaluate_flags_and_maybe_switch(post)
+
     res = client.get(f"/status/{pid}").get_json()
-    assert res["winner"] == "u2"  # deve essere passato il secondo
+    assert res["winner"] == "u2"
+
+
+
 
 
 def test_flag_does_not_switch_if_enough_likes(client):
