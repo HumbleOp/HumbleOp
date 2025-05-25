@@ -47,6 +47,8 @@ class Post(db.Model):
     second    = db.Column(db.String, db.ForeignKey('users.username'))
     initial_votes = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    voting_deadline = db.Column(db.DateTime, nullable=True)
+    duel_start_time = db.Column(db.DateTime, nullable=True)
 
     comments = db.relationship('Comment', backref='posts', lazy=True)
     votes    = db.relationship('Vote',    backref='posts', lazy=True)

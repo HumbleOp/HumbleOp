@@ -25,6 +25,29 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+def finalize_voting_phase(post_id):
+    post = db.session.get(Post, post_id)
+    if not post:
+        return
+    commenters = Comment.query.filter_by(post_id=post_id).all()
+    if not commenters:
+        return
+    votes = Vote.query.filter_by(post_id=post_id).all()
+    if not votes:
+        return
+    tally = {}
+    for v in votes:
+        tally[v.candidate] = tally.get(v.candidate, 0) + 1
+    ranking = sorted(tally.items(), key=lambda x: x[1], reverse=True)
+    winner, winner_count = ranking[0]
+    second = ranking[1][0] if len(ranking) > 1 else None
+    iv = max(min(winner_count, MAX_INITIAL_VOTES), MIN_INITIAL_VOTES)
+
+    post.winner = winner
+    post.second = second
+    post.initial_votes = iv
+    db.session.commit()
+
 @posts_bp.route("/create_post/<post_id>", methods=["POST"])
 @login_required
 def create_post(post_id):
@@ -52,24 +75,47 @@ def create_post(post_id):
             body:
               type: string
               example: "#Debate Should AI moderate online forums?"
+              description: Text content of the post
+            voting_hours:
+              type: number
+              example: 24
+              description: How many hours to allow for voting before the duel is evaluated
     responses:
       200:
         description: Post created successfully
+        examples:
+          application/json:
+            status: Post created.
+            tags: ["debate"]
+            media: []
+            voting_deadline: "2025-05-25T10:45:00"
       400:
-        description: Missing body field
+        description: Missing body field or invalid voting_hours
       409:
         description: Post with given ID already exists
     """
     from routes.tag import extract_tags
-
     body = request.json.get("body")
+    try:
+      hours = float(request.json.get("voting_hours", 24))
+    except (TypeError, ValueError):
+      return error("Invalid 'voting_hours'", 400)
+
     if not body:
         return error("Field 'body' is required.", 400)
     if db.session.get(Post, post_id):
         return error("Post already exists.", 409)
 
     media_urls = extract_media_urls(body)
-    post = Post(id=post_id, author=g.current_user.username, body=body, media_urls=media_urls)
+    voting_deadline = datetime.now() + timedelta(hours=hours)
+
+    post = Post(
+        id=post_id,
+        author=g.current_user.username,
+        body=body,
+        media_urls=media_urls,
+        voting_deadline=voting_deadline
+    )
     db.session.add(post)
 
     tag_names = extract_tags(body)
@@ -81,11 +127,78 @@ def create_post(post_id):
         post.tags.append(tag)
 
     db.session.commit()
-    return success({
-        "status": "Post created.",
-        "tags": tag_names,
-        "media": media_urls
-    }, 200)
+
+    scheduler.add_job(finalize_voting_phase, 'date', run_date=voting_deadline, args=[post_id])
+
+    return success({"status": "Post created.", "tags": tag_names, "media": media_urls, "voting_deadline": voting_deadline.isoformat()}, 200)
+
+@posts_bp.route("/schedule_duel/<post_id>", methods=["POST"])
+@login_required
+def schedule_duel(post_id):
+    """
+    Schedule the start of a duel
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post whose duel is to be scheduled
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - start_in_hours
+          properties:
+            start_in_hours:
+              type: number
+              example: 0.5
+              description: Number of hours from now when the duel should start
+    responses:
+      200:
+        description: Duel start scheduled
+        examples:
+          application/json:
+            status: Duel scheduled.
+            duel_start_time: "2025-05-25T12:30:00"
+      400:
+        description: Missing or invalid scheduling time
+      403:
+        description: Unauthorized (not a duel participant)
+      404:
+        description: Post not found
+    """
+    post = db.session.get(Post, post_id)
+    if not post:
+        return error("Post not found.", 404)
+    if g.current_user.username not in (post.winner, post.second):
+        return error("Only duel participants can schedule.", 403)
+
+    start_in = request.json.get("start_in_hours")
+    if not start_in:
+        return error("Missing 'start_in_hours'", 400)
+
+    start_time = datetime.now() + timedelta(hours=start_in)
+    post.duel_start_time = start_time
+    db.session.commit()
+
+    scheduler.add_job(start_duel_officially, 'date', run_date=start_time, args=[post_id])
+    return success({"status": "Duel scheduled.", "duel_start_time": start_time.isoformat()}, 200)
+
+
+def start_duel_officially(post_id):
+    post = db.session.get(Post, post_id)
+    if not post:
+        return
+    post.started = True
+    post.postponed = False
+    db.session.commit()
 
 
 @posts_bp.route("/comment/<post_id>", methods=["POST"])
@@ -281,15 +394,26 @@ def get_status(post_id):
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
+
+    now = datetime.now()
+    countdown = 0
+    if post.voting_deadline:
+        remaining = (post.voting_deadline - now).total_seconds()
+        countdown = max(int(remaining), 0)
+
     return success({
         "id": post.id,
         "author": post.author,
+        "body": post.body,
         "winner": post.winner,
         "second": post.second,
         "started": post.started,
         "postponed": post.postponed,
-        "media": post.media_urls
+        "media": post.media_urls,
+        "voting_deadline": post.voting_deadline.isoformat() if post.voting_deadline else None,
+        "voting_ends_in": countdown
     }, 200)
+
 
 
 @posts_bp.route("/results/<post_id>", methods=["GET"])
@@ -416,7 +540,7 @@ def flag(post_id):
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
-    if not post.winner:
+    if not post.started or datetime.now() < post.duel_start_time:
         return error("Duel has not started yet.", 400)
     flagger = g.current_user.username
     if Flag.query.filter_by(post_id=post_id, flagger=flagger).first():
@@ -431,6 +555,25 @@ def flag(post_id):
 @posts_bp.route("/start_now/<post_id>", methods=["POST"])
 @login_required
 def start_now(post_id):
+    """
+    Force mark post as started (bypasses scheduling)
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters: 
+      - name: post_id
+        in: path
+        type: string
+        required: true
+        description: ID of the post to mark as started
+    responses:
+      200:
+        description: Post marked as started
+      404:
+        description: Post not found
+    """
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
