@@ -1,12 +1,14 @@
 // src/LoginPage.jsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -19,8 +21,8 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem('token', data.token);
-        navigate('/profile'); // redirect
+        login(data.token);     // usa il context
+        navigate('/profile');  // reindirizza
       } else {
         setError(data.error || 'Errore');
       }

@@ -1,10 +1,12 @@
 // src/pages/RegisterPage.jsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ username: '', password: '', email: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
   async function handleRegister(e) {
     e.preventDefault();
@@ -21,6 +23,8 @@ export default function RegisterPage() {
 
       if (res.ok) {
         setSuccess('Registrazione riuscita!');
+        setTimeout(() => navigate('/'), 1500);
+        return;
       } else {
         setError(data.error || 'Errore');
       }
