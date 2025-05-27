@@ -3,6 +3,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import CreatePost from './pages/CreatePost';
+import PostList from './pages/PostList';
+import PostDetail from './pages/PostDetail';
+
 
 function RoutesWithAuth() {
   const { token } = useAuth();
@@ -12,6 +16,9 @@ function RoutesWithAuth() {
       <Route path="/" element={token ? <Navigate to="/profile" /> : <LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/" />} />
+      <Route path="/create" element={token ? <CreatePost /> : <Navigate to="/" />} />
+      <Route path="/posts" element={<PostList />} />
+      <Route path="/post/:id" element={<PostDetail />} />
     </Routes>
   );
 }

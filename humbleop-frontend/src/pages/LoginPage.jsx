@@ -21,10 +21,10 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        login(data.token);     // usa il context
-        navigate('/profile');  // reindirizza
+        login(data.token);
+        navigate('/profile');
       } else {
-        setError(data.error || 'Errore');
+        setError(data.error || 'Login failed');
       }
     } catch (err) {
       setError(err.message);
@@ -54,7 +54,7 @@ export default function LoginPage() {
       </form>
 
       <p>
-        New to HumbleOp? <Link to="/register">Registrati</Link>
+        New to HumbleOp? <Link to="/register">Sign up</Link>
       </p>
     </>
   );

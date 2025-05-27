@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from flask_cors import CORS
 from flasgger import Swagger
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -13,6 +14,13 @@ if os.getenv("DATABASE_URL", "").startswith("postgresql://"):
 
 def create_app(config=None):
     app = Flask(__name__, instance_relative_config=True)
+    CORS(
+    app,
+    origins=["http://localhost:3000"],
+    supports_credentials=True,
+    methods=["GET", "POST", "OPTIONS"]
+)
+
 
     app.config['SWAGGER'] = {
         'title': 'HumbleOp API',

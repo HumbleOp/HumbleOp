@@ -63,6 +63,8 @@ class Comment(db.Model):
     post_id   = db.Column(db.String,  db.ForeignKey('posts.id'), nullable=False)
     commenter = db.Column(db.String,  db.ForeignKey('users.username'), nullable=False)
     text      = db.Column(db.Text,    nullable=False)
+    votes_rel = db.relationship("Vote", backref="comment", lazy="dynamic", foreign_keys="Vote.comment_id")
+
 
 class Vote(db.Model):
     __tablename__ = 'votes'
@@ -70,6 +72,8 @@ class Vote(db.Model):
     post_id   = db.Column(db.String,  db.ForeignKey('posts.id'), nullable=False)
     voter     = db.Column(db.String,  db.ForeignKey('users.username'), nullable=False)
     candidate = db.Column(db.String,  nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey("comments.id"))
+
 
 class Flag(db.Model):
     __tablename__ = 'flags'

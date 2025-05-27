@@ -243,6 +243,8 @@ def add_comment(post_id):
         return error("Post not found.", 404)
     commenter = g.current_user.username
     text = request.json.get("text")
+    if commenter == post.author:
+      return error("Authors cannot comment on their own post.", 403)
     if not text:
         return error("Field 'text' is required.", 400)
     existing = Comment.query.filter_by(post_id=post_id, commenter=commenter).first()
@@ -484,7 +486,8 @@ def get_comments(post_id):
     data = [{
         "commenter": c.commenter,
         "text": c.text,
-        "votes": Vote.query.filter_by(post_id=post_id, candidate=c.commenter).count()
+        "votes": Vote.query.filter_by(post_id=post_id, candidate=c.commenter).count(),
+        "voters": [v.voter for v in c.votes_rel.all()]
     } for c in comments]
     return success({"comments": data}, 200)
 

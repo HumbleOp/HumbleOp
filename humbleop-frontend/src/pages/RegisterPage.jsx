@@ -22,11 +22,11 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (res.ok) {
-        setSuccess('Registrazione riuscita!');
+        setSuccess('Registration successful! Redirecting...');
         setTimeout(() => navigate('/'), 1500);
         return;
       } else {
-        setError(data.error || 'Errore');
+        setError(data.error || 'Registration failed');
       }
     } catch (err) {
       setError(err.message);
@@ -35,7 +35,7 @@ export default function RegisterPage() {
 
   return (
     <form onSubmit={handleRegister}>
-      <h2>Registrati</h2>
+      <h2>Sign up</h2>
       <input
         placeholder="Username"
         value={form.username}
@@ -52,7 +52,7 @@ export default function RegisterPage() {
         value={form.password}
         onChange={e => setForm({ ...form, password: e.target.value })}
       />
-      <button type="submit">Registrati</button>
+      <button type="submit">Register</button>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {success && <p style={{ color: 'green' }}>{success}</p>}
     </form>

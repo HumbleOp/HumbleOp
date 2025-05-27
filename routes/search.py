@@ -57,8 +57,8 @@ def search():
     author_filter = request.args.get("author")
     limit = min(int(request.args.get("limit", 10)), 100)
 
-    if not q:
-        return jsonify({"error": "Missing query parameter 'q'"}), 400
+    if not q and search_type == "user":
+        return jsonify({"error": "Missing query parameter 'q' for user search"}), 400
 
     results = {"users": [], "posts": []}
 

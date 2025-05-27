@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -18,14 +20,21 @@ export default function ProfilePage() {
       .then(data => setProfile(data));
   }, [token]);
 
-  if (!profile) return <p>Caricamento...</p>;
+  if (!profile) return <p>Loading profile...</p>;
 
   return (
     <div>
-      <h2>Benvenuto, {profile.username}!</h2>
-      <p>Bio: {profile.bio || 'nessuna bio'}</p>
-      <p>Badge: {(profile.badges || []).join(', ')}</p>
+      <h2>Welcome, {profile.username}!</h2>
+      <p>Bio: {profile.bio || 'No bio provided'}</p>
+      <p>Badges: {(profile.badges || []).join(', ')}</p>
       <img src={profile.avatar_url} alt="avatar" style={{ maxWidth: '150px' }} />
+      <img src={profile.avatar_url} alt="avatar" style={{ maxWidth: '150px' }} />
+      <p>
+        <Link to="/create">📝 New Post</Link>
+      </p>
+      <p>
+        <Link to="/posts">See all posts</Link>
+      </p>
       <div style={{ marginTop: '1em' }}>
         <button onClick={() => {
           logout();
