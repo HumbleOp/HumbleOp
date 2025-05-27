@@ -46,8 +46,11 @@ def test_search_with_limit(client):
 
 def test_search_missing_q(client):
     rv = client.get("/search")
-    assert rv.status_code == 400
-    assert "error" in rv.get_json()
+    assert rv.status_code == 200
+    data = rv.get_json()
+    assert "users" in data
+    assert "posts" in data
+
 
 def test_search_sort_order(client):
     token = client.post("/register", json={

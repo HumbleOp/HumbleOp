@@ -22,10 +22,11 @@ def test_comment_on_nonexistent_post(client):
     assert rv.status_code == 404
 
 def test_comment_without_text(client):
-    token = client.post("/register", json={"username": "x4", "password": "p", "email": "x4@example.com"}).get_json()["token"]
+    author = client.post("/register", json={"username": "a", "password": "p", "email": "a@a.com"}).get_json()["token"]
+    commenter = client.post("/register", json={"username": "b", "password": "p", "email": "b@b.com"}).get_json()["token"]
     pid = uuid.uuid4().hex
-    client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"body": "B"})
-    rv = client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token}"}, json={})
+    client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {author}"}, json={"body": "B"})
+    rv = client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {commenter}"}, json={})
     assert rv.status_code == 400
 
 def test_comment_twice_same_user(client):
@@ -37,13 +38,16 @@ def test_comment_twice_same_user(client):
     assert rv.status_code == 403
 
 def test_eloquent_speaker_badge(client):
-    token = client.post("/register", json={"username": "x6", "password": "p", "email": "x6@example.com"}).get_json()["token"]
+    author = client.post("/register", json={"username": "aut", "password": "p", "email": "a@a.com"}).get_json()["token"]
+    commenter = client.post("/register", json={"username": "eloq", "password": "p", "email": "e@e.com"}).get_json()["token"]
+
     for i in range(20):
         pid = uuid.uuid4().hex
-        client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"body": "B"})
+        client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {author}"}, json={"body": f"Post {i}"})
         long_text = "x" * 101
-        client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"text": long_text})
-    profile = client.get("/profile", headers={"Authorization": f"Bearer {token}"}).get_json()
+        client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {commenter}"}, json={"text": long_text})
+
+    profile = client.get("/profile", headers={"Authorization": f"Bearer {commenter}"}).get_json()
     assert "Eloquent Speaker" in profile["badges"]
 
 def test_vote_invalid_candidate(client):
@@ -57,10 +61,12 @@ def test_vote_twice(client):
     token = client.post("/register", json={"username": "x8", "password": "p", "email": "x8@example.com"}).get_json()["token"]
     pid = uuid.uuid4().hex
     client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"body": "B"})
-    client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"text": "text"})
-    client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"candidate": "x8"})
-    rv = client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"candidate": "x8"})
-    assert rv.status_code == 403
+    client.post("/register", json={"username": "y8", "password": "p", "email": "y8@example.com"})
+    tok_y = client.post("/login", json={"username": "y8", "password": "p"}).get_json()["token"]
+    client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {tok_y}"}, json={"text": "text"})
+    client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"candidate": "y8"})
+    rv = client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"candidate": "y8"})
+    assert rv.status_code == 400
 
 def test_start_duel_with_no_post(client):
     token = client.post("/register", json={"username": "x9", "password": "p", "email": "x9@example.com"}).get_json()["token"]

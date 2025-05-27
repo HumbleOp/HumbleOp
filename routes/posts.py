@@ -304,7 +304,7 @@ def vote(post_id):
     if not Comment.query.filter_by(post_id=post_id, commenter=candidate).first():
         return error(f"Candidate '{candidate}' has not commented.", 400)
     if Vote.query.filter_by(post_id=post_id, voter=voter).first():
-        return error(f"User '{voter}' has already voted.", 403)
+        return error(f"User '{voter}' has already voted.", 400)
     db.session.add(Vote(post_id=post_id, voter=voter, candidate=candidate))
     db.session.commit()
     award_badge(voter, "First Responder")

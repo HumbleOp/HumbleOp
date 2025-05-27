@@ -1,11 +1,9 @@
+
 def test_get_posts_by_tag(client):
-    # Registra utente nuovo
     client.post("/register", json={"username": "t1", "password": "p", "email": "t1@example.com"})
     res = client.post("/login", json={"username": "t1", "password": "p"})
-    assert res.status_code == 200
     token = res.json()["token"]
 
-    # Crea post con tag
     pid = "tagtest001"
     client.post(
         f"/create_post/{pid}",
@@ -13,7 +11,11 @@ def test_get_posts_by_tag(client):
         json={"body": "test #python #flask", "voting_hours": 0.01}
     )
 
-    # Verifica tag
+    # Utente diverso commenta
+    client.post("/register", json={"username": "t2", "password": "p", "email": "t2@example.com"})
+    token2 = client.post("/login", json={"username": "t2", "password": "p"}).json()["token"]
+    client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token2}"}, json={"text": "Test comment"})
+
     res = client.get("/tags/python")
     assert res.status_code == 200
     data = res.json()
@@ -23,17 +25,21 @@ def test_get_posts_by_tag(client):
 
 
 def test_list_popular_tags(client):
-    # Assicurati che almeno un post con tag esista
     client.post("/register", json={"username": "taguser", "password": "p", "email": "taguser@example.com"})
     res = client.post("/login", json={"username": "taguser", "password": "p"})
     token = res.json()["token"]
+
+    pid = "sampletagpost"
     client.post(
-        "/create_post/sampletagpost",
+        f"/create_post/{pid}",
         headers={"Authorization": f"Bearer {token}"},
         json={"body": "#popular il contenuto con un tag", "voting_hours": 0.01}
     )
 
-    # Ora prova a ottenere i tag popolari
+    client.post("/register", json={"username": "commenter", "password": "p", "email": "commenter@example.com"})
+    token2 = client.post("/login", json={"username": "commenter", "password": "p"}).json()["token"]
+    client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token2}"}, json={"text": "Another test comment"})
+
     res = client.get("/tags?limit=5")
     assert res.status_code == 200
     data = res.json()

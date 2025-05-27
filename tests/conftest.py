@@ -1,8 +1,24 @@
 import os
+import uuid
 import tempfile
 import pytest
 from app import create_app
-from core.extensions import db, scheduler
+from core.extensions import db as _db, scheduler
+
+
+@pytest.fixture
+def unique_username():
+    return f"user_{uuid.uuid4().hex}"
+
+
+@pytest.fixture(scope='function')
+def app():
+    app = create_app('testing')
+    with app.app_context():
+        _db.create_all()
+        yield app
+        _db.session.remove()
+        _db.drop_all()
 
 
 @pytest.fixture
@@ -20,7 +36,7 @@ def client():
     app = create_app(config)
 
     with app.app_context():
-        db.create_all()
+        _db.create_all()
 
     yield app.test_client()
 

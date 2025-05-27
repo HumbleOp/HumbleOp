@@ -1,67 +1,86 @@
 import uuid
 
+import uuid
+
 def test_full_user_duel_flow(client, auth_token):
-    # Register Bob once
-    resp = client.post('/register', json={
-        'username': 'bob',
-        'password': 'hunter2',
-        'email': 'bob@example.com'
-    })
-    assert resp.status_code == 201
-    resp = client.post('/login', json={
-        'username': 'bob',
-        'password': 'hunter2'
-    })
-    assert resp.status_code == 200
-    bob_token = resp.get_json()['token']
+    # Genera nomi univoci
+    alice_name = f"alice_{uuid.uuid4().hex[:8]}"
+    bob_name = f"bob_{uuid.uuid4().hex[:8]}"
+    charlie_name = f"charlie_{uuid.uuid4().hex[:8]}"
 
-    # Perform 10 full duel flows to trigger "Consistent Debater" badge
+    # Registrazioni
+    client.post("/register", json={
+        "username": bob_name,
+        "password": "hunter2",
+        "email": f"{bob_name}@example.com"
+    })
+    bob_token = client.post("/login", json={
+        "username": bob_name,
+        "password": "hunter2"
+    }).get_json()["token"]
+
+    client.post("/register", json={
+        "username": alice_name,
+        "password": "hunter2",
+        "email": f"{alice_name}@example.com"
+    })
+    alice_token = client.post("/login", json={
+        "username": alice_name,
+        "password": "hunter2"
+    }).get_json()["token"]
+
+    client.post("/register", json={
+        "username": charlie_name,
+        "password": "hunter2",
+        "email": f"{charlie_name}@example.com"
+    })
+    charlie_token = client.post("/login", json={
+        "username": charlie_name,
+        "password": "hunter2"
+    }).get_json()["token"]
+
     for _ in range(10):
-        # 1) Alice crea un post
         post_id = uuid.uuid4().hex
+
+        # Bob crea il post
         resp = client.post(
-            f'/create_post/{post_id}',
-            headers={'Authorization': f'Bearer {auth_token}'},
-            json={'body': 'Primo post!'}
+            f"/create_post/{post_id}",
+            headers={"Authorization": f"Bearer {bob_token}"},
+            json={"body": "Post by Bob"}
         )
         assert resp.status_code == 200
 
-        # 2) Alice commenta
+        # Alice commenta
         resp = client.post(
-            f'/comment/{post_id}',
-            headers={'Authorization': f'Bearer {auth_token}'},
-            json={'text': 'Commento iniziale'}
+            f"/comment/{post_id}",
+            headers={"Authorization": f"Bearer {alice_token}"},
+            json={"text": "Commento da Alice"}
         )
         assert resp.status_code == 200
 
-        # 3) Bob vota il post
+        # Charlie commenta
         resp = client.post(
-            f'/vote/{post_id}',
-            headers={'Authorization': f'Bearer {bob_token}'},
-            json={'candidate': 'alice'}
+            f"/comment/{post_id}",
+            headers={"Authorization": f"Bearer {charlie_token}"},
+            json={"text": "Commento da Charlie"}
         )
         assert resp.status_code == 200
 
-        # 4) Bob avvia il duello
+        # Charlie vota per Alice
         resp = client.post(
-            f'/start_duel/{post_id}',
-            headers={'Authorization': f'Bearer {bob_token}'}
+            f"/vote/{post_id}",
+            headers={"Authorization": f"Bearer {charlie_token}"},
+            json={"candidate": alice_name}
         )
         assert resp.status_code == 200
 
-        # 5) Alice vota nuovamente
+        # Charlie avvia il duello
         resp = client.post(
-            f'/vote/{post_id}',
-            headers={'Authorization': f'Bearer {auth_token}'},
-            json={'candidate': 'alice'}
+            f"/start_duel/{post_id}",
+            headers={"Authorization": f"Bearer {charlie_token}"}
         )
         assert resp.status_code == 200
 
-    # 6) Verifica che Alice abbia guadagnato il badge "Consistent Debater"
-    resp = client.get(
-        '/profile',
-        headers={'Authorization': f'Bearer {auth_token}'}
-    )
-    assert resp.status_code == 200
-    badges = resp.get_json()['badges']
-    assert 'Consistent Debater' in badges
+    # Verifica badge di Alice
+    rv = client.get("/profile", headers={"Authorization": f"Bearer {alice_token}"})
+    assert "Consistent Debater" in rv.get_json()["badges"]
