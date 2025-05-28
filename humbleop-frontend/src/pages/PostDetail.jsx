@@ -1,14 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 
 export default function PostDetail() {
   const { id } = useParams();
   const { token } = useAuth();
+  const { request, loading, error } = useApi();
+
   const [currentUser, setCurrentUser] = useState(null);
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
-  const [error, setError] = useState('');
   const [commentText, setCommentText] = useState('');
   const [commentError, setCommentError] = useState('');
   const [commentSuccess, setCommentSuccess] = useState('');
@@ -17,15 +19,11 @@ export default function PostDetail() {
 
   const fetchDetails = useCallback(async () => {
     try {
-      const resPost = await fetch(`http://localhost:5000/status/${id}`);
-      const resComments = await fetch(`http://localhost:5000/comments/${id}`);
-      const postData = await resPost.json();
-      const commentData = await resComments.json();
+      const postData = await request(`/status/${id}`);
+      const commentData = await request(`/comments/${id}`);
 
-      if (resPost.ok) setPost(postData);
-      else setError(postData.error || 'Failed to load post');
-
-      if (resComments.ok) setComments(commentData.comments || []);
+      setPost(postData);
+      setComments(commentData.comments || []);
 
       if (token && postData.author) {
         const res = await fetch('http://localhost:5000/profile', {
@@ -41,11 +39,10 @@ export default function PostDetail() {
           setVotedFor(votedComment.commenter);
         }
       }
-
-    } catch (err) {
-      setError(err.message);
+    } catch {
+        // error already handled by useApi
     }
-  }, [id, token]);
+  }, [id, token, request]);
 
   useEffect(() => {
     fetchDetails();
@@ -57,23 +54,10 @@ export default function PostDetail() {
     setCommentSuccess('');
 
     try {
-      const res = await fetch(`http://localhost:5000/comment/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ text: commentText })
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setCommentSuccess('Comment submitted!');
-        setCommentText('');
-        fetchDetails();
-      } else {
-        setCommentError(data.error || 'Failed to submit comment');
-      }
+      await request(`/comment/${id}`, 'POST', { text: commentText });
+      setCommentSuccess('Comment submitted!');
+      setCommentText('');
+      fetchDetails();
     } catch (err) {
       setCommentError(err.message);
     }
@@ -82,28 +66,18 @@ export default function PostDetail() {
   async function handleVote(candidate) {
     setVoteStatus('');
     try {
-      const res = await fetch(`http://localhost:5000/vote/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ candidate })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setVoteStatus(`Voted for ${candidate}`);
-        fetchDetails();
-      } else {
-        setVoteStatus(data.error || 'Vote failed');
-      }
+      await request(`/vote/${id}`, 'POST', { candidate });
+      setVoteStatus(`Voted for ${candidate}`);
+      fetchDetails();
     } catch (err) {
       setVoteStatus(err.message);
     }
   }
 
+
+  if (loading || !post) return <p>Loading post...</p>;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!post) return <p>Loading post...</p>;
+
 
   return (
     <div>
@@ -166,7 +140,9 @@ export default function PostDetail() {
             style={{ width: '100%' }}
             placeholder="Write your comment..."
           />
-          <button type="submit">Submit</button>
+          <button type="submit" disabled={loading}>
+            {loading ? 'Submitting...' : 'Submit'}
+          </button>
           {commentError && <p style={{ color: 'red' }}>{commentError}</p>}
           {commentSuccess && <p style={{ color: 'green' }}>{commentSuccess}</p>}
         </form>
