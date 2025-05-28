@@ -1,4 +1,5 @@
 from flask import Blueprint, request, g
+from collections import Counter
 from core.responses import error, success
 from core.extensions import db, scheduler
 from core.utils import award_badge, award_marathoner, evaluate_badges, handle_duel_timeout, extract_media_urls
@@ -413,6 +414,11 @@ def get_status(post_id):
     if post.voting_deadline:
         remaining = (post.voting_deadline - now).total_seconds()
         countdown = max(int(remaining), 0)
+    like_users = [l.liker for l in Like.query.filter_by(post_id=post_id).all()]
+    flag_users = [f.flagger for f in Flag.query.filter_by(post_id=post_id).all()]
+    votes = Vote.query.filter_by(post_id=post_id).all()
+    ranking = Counter(v.candidate for v in votes)
+
 
     return success({
         "id": post.id,
@@ -424,7 +430,13 @@ def get_status(post_id):
         "postponed": post.postponed,
         "media": post.media_urls,
         "voting_deadline": post.voting_deadline.isoformat() if post.voting_deadline else None,
-        "voting_ends_in": countdown
+        "voting_ends_in": countdown,
+        "likes": len(like_users),
+        "flags": len(flag_users),
+        "like_users": like_users,
+        "flag_users": flag_users,
+        "ranking": dict(ranking)
+
     }, 200)
 
 
@@ -521,6 +533,10 @@ def like(post_id):
     liker = g.current_user.username
     if Like.query.filter_by(post_id=post_id, liker=liker).first():
         return error(f"User '{liker}' has already liked this post.", 403)
+    if not post.winner:
+        return error("Post has no winner yet.", 400)
+    if liker in (post.author, post.winner):
+        return error("Authors and winners cannot like.", 403)
     db.session.add(Like(post_id=post_id, liker=liker))
     db.session.commit()
     return success({"status": "Like registered"}, 200)
@@ -559,6 +575,10 @@ def flag(post_id):
     flagger = g.current_user.username
     if Flag.query.filter_by(post_id=post_id, flagger=flagger).first():
         return error(f"User '{flagger}' has already flagged this post.", 403)
+    if not post.winner:
+        return error("Post has no winner yet.", 400)
+    if flagger in (post.author, post.winner):
+        return error("Authors and winners cannot flag.", 403)
     db.session.add(Flag(post_id=post_id, flagger=flagger))
     db.session.commit()
     switched, old, new = evaluate_flags_and_maybe_switch(post)

@@ -137,18 +137,24 @@ def test_start_now(client):
 
 
 def test_like_post(client):
-    t = client.post("/register", json={ "username": "like1", "password": "p", "email": "like1@example.com" }).get_json()["token"]
-    client.post("/register", json={ "username": "like2", "password": "p", "email": "like2@example.com" })
+    # autore
+    token1 = client.post("/register", json={ "username": "like1", "password": "p", "email": "like1@example.com" }).get_json()["token"]
+    # commentatore
+    token2 = client.post("/register", json={ "username": "like2", "password": "p", "email": "like2@example.com" }).get_json()["token"]
+    # votante
+    token3 = client.post("/register", json={ "username": "like3", "password": "p", "email": "like3@example.com" }).get_json()["token"]
 
     pid = uuid.uuid4().hex
-    client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {t}"}, json={"body": "b"})
-    client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {t}"}, json={"text": "c"})
-    client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {t}"}, json={"candidate": "like1"})
-    client.post(f"/start_duel/{pid}", headers={"Authorization": f"Bearer {t}"})
 
-    rv = client.post(f"/like/{pid}", headers={"Authorization": f"Bearer {t}"})
+    client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token1}"}, json={"body": "like post"})
+    client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token2}"}, json={"text": "comment"})
+    client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token3}"}, json={"candidate": "like2"})
+    client.post(f"/start_duel/{pid}", headers={"Authorization": f"Bearer {token3}"})
+
+    rv = client.post(f"/like/{pid}", headers={"Authorization": f"Bearer {token3}"})
     assert rv.status_code == 200
     assert "Like registered" in rv.get_json()["status"]
+
 
 def test_flag_switches_to_second_if_too_many_flags(client):
     token_1 = client.post("/register", json={"username": "u1", "password": "p", "email": "u1@example.com"}).get_json()["token"]

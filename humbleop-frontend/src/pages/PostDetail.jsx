@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function PostDetail() {
@@ -15,11 +15,7 @@ export default function PostDetail() {
   const [votedFor, setVotedFor] = useState(null);
   const [voteStatus, setVoteStatus] = useState('');
 
-  useEffect(() => {
-    fetchDetails();
-  }, [id]);
-
-  async function fetchDetails() {
+  const fetchDetails = useCallback(async () => {
     try {
       const resPost = await fetch(`http://localhost:5000/status/${id}`);
       const resComments = await fetch(`http://localhost:5000/comments/${id}`);
@@ -38,19 +34,22 @@ export default function PostDetail() {
         const userData = await res.json();
         setCurrentUser(userData.username);
 
-        // check if current user already voted
         const votedComment = commentData.comments.find(c =>
           c.voters?.includes(userData.username)
         );
         if (votedComment) {
-            setVotedFor(votedComment.commenter);
+          setVotedFor(votedComment.commenter);
         }
       }
 
     } catch (err) {
       setError(err.message);
     }
-  }
+  }, [id, token]);
+
+  useEffect(() => {
+    fetchDetails();
+  }, [fetchDetails]);
 
   async function handleCommentSubmit(e) {
     e.preventDefault();
@@ -126,6 +125,13 @@ export default function PostDetail() {
         <p><strong>Winner:</strong> {post.winner || '—'}</p>
         <p><strong>Second:</strong> {post.second || '—'}</p>
         <p><strong>Votes end in:</strong> {post.voting_ends_in} seconds</p>
+        {post.winner && post.second && post.started && (
+          <p className="mt-2 text-sm text-yellow-700">
+            <Link to={`/duel/${post.id}`} className="underline hover:text-yellow-900">
+              👉 Go to duel
+            </Link>
+          </p>
+        )}
       </div>
 
       <h3>Comments</h3>
@@ -136,13 +142,13 @@ export default function PostDetail() {
           {comments.map((c, i) => (
             <li key={i}>
               <strong>{c.commenter}:</strong> {c.text} ({c.votes} votes)
-                {token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
+              {token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
                 votedFor === null ? (
-                    <button onClick={() => handleVote(c.commenter)}>Vote</button>
+                  <button onClick={() => handleVote(c.commenter)}>Vote</button>
                 ) : votedFor === c.commenter ? (
-                    <span style={{ marginLeft: '1em', color: 'green' }}>🗳️ You voted for this comment</span>
+                  <span style={{ marginLeft: '1em', color: 'green' }}>🗳️ You voted for this comment</span>
                 ) : null
-                )}
+              )}
             </li>
           ))}
         </ul>
@@ -165,6 +171,7 @@ export default function PostDetail() {
           {commentSuccess && <p style={{ color: 'green' }}>{commentSuccess}</p>}
         </form>
       )}
+
       {token && currentUser === post.author && (
         <p>You cannot comment on your own post.</p>
       )}
