@@ -20,8 +20,9 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password })
       });
       const data = await res.json();
+      console.log('Login response:', data);
       if (res.ok) {
-        login(data.token);
+        login(data.access_token);
         navigate('/profile');
       } else {
         setError(data.error || 'Login failed');

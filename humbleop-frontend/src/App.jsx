@@ -9,6 +9,7 @@ import PostDetail from './pages/PostDetail';
 import PostVictoryPage from "./pages/PostVictoryPage";
 import CompletedPosts from "./pages/CompletedPosts";
 import DuelPage from './pages/DuelPage';
+import TestTools from './pages/TestTools';
 
 
 
@@ -27,6 +28,7 @@ function RoutesWithAuth() {
       <Route path="/victory/:id" element={<PostVictoryPage />} />
       <Route path="/completed" element={<CompletedPosts />} />
       <Route path="/duel/:id" element={token ? <DuelPage /> : <Navigate to="/" />} />
+      <Route path="/test" element={<TestTools />} />
     </Routes>
   );
 }

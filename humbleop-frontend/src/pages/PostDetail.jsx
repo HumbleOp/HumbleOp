@@ -74,6 +74,28 @@ export default function PostDetail() {
     }
   }
 
+  async function handleUnvote() {
+  try {
+    const res = await fetch(`http://localhost:5000/unvote/${id}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setVoteStatus('Vote revoked');
+      setVotedFor(null);
+      fetchDetails();
+    } else {
+      setVoteStatus(data.error || 'Unvote failed');
+    }
+  } catch (err) {
+    setVoteStatus(err.message);
+  }
+}
+
+
 
   if (loading || !post) return <p>Loading post...</p>;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
@@ -120,7 +142,10 @@ export default function PostDetail() {
                 votedFor === null ? (
                   <button onClick={() => handleVote(c.commenter)}>Vote</button>
                 ) : votedFor === c.commenter ? (
-                  <span style={{ marginLeft: '1em', color: 'green' }}>🗳️ You voted for this comment</span>
+                  <>
+                    <span style={{ marginLeft: '1em', color: 'green' }}>🗳️ You voted for this comment</span>
+                    <button onClick={handleUnvote} style={{ marginLeft: '1em' }}>Unvote</button>
+                  </>
                 ) : null
               )}
             </li>

@@ -317,6 +317,34 @@ def vote(post_id):
     db.session.commit()
     return success({"message": f"{voter} voted for {candidate}"}, 200)
 
+@posts_bp.route("/unvote/<post_id>", methods=["POST"])
+@login_required
+def unvote(post_id):
+    """
+    Revoke user's vote on a post
+    ---
+    tags:
+      - Posts
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: post_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Vote revoked
+      404:
+        description: Post or vote not found
+    """
+    vote = Vote.query.filter_by(post_id=post_id, voter=g.current_user.username).first()
+    if not vote:
+        return error("No existing vote to revoke", 404)
+    db.session.delete(vote)
+    db.session.commit()
+    return success({"status": "Vote revoked"}, 200)
+
 
 @posts_bp.route("/start_duel/<post_id>", methods=["POST"])
 @login_required

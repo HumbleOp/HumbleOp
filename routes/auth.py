@@ -123,4 +123,5 @@ def login():
         user.password_hash = ph.hash(p)
     user.token = uuid.uuid4().hex
     db.session.commit()
-    return jsonify(token=user.token), 200
+    return jsonify(access_token=user.token), 200
+

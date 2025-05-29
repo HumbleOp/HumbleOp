@@ -4,23 +4,36 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
-
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
   const { token, logout } = useAuth();
 
-  useEffect(() => {
-    fetch('http://localhost:5000/profile', {
-      headers: {
-        'Authorization': 'Bearer ' + token
+useEffect(() => {
+  async function fetchProfile() {
+    try {
+      const res = await fetch('http://localhost:5000/profile', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        logout(); // rimuove token se è invalido
+        navigate('/');
+      } else {
+        setProfile(data);
       }
-    })
-      .then(res => res.json())
-      .then(data => setProfile(data));
-  }, [token]);
+    } catch {
+      logout();
+      navigate('/');
+    }
+  }
 
-  if (!profile) return <p>Loading profile...</p>;
+  if (token) {
+    fetchProfile();
+  }
+}, [token, logout, navigate]);
+
+if (!profile) return <p>Loading profile...</p>;
 
   return (
     <div>

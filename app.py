@@ -1,10 +1,11 @@
 import os
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
 from core.extensions import db, scheduler
+from models import Post
 
 if os.getenv("DATABASE_URL", "").startswith("postgresql://"):
     from wait_for_postgres import wait_for_postgres
@@ -72,8 +73,45 @@ def create_app(config=None):
     @app.route("/")
     def index():
         return "HumbleOp è attivo!"
-    return app
+    
 
+    @app.route('/debug/expire_post/<post_id>', methods=['POST'])
+    def debug_expire_post(post_id):
+        if not app.debug:
+            return jsonify(error="Not allowed outside debug mode"), 403
+
+        post = Post.query.get(post_id)
+        if not post:
+            return jsonify(error="Post not found"), 404
+
+        post.voting_ends_in = 0
+        db.session.commit()
+
+        return jsonify(success=True)
+    
+    @app.route('/debug/force_winner/<post_id>', methods=['POST'])
+    def debug_force_winner(post_id):
+        if not app.debug:
+            return jsonify(error="Not allowed outside debug mode"), 403
+
+        post = Post.query.get(post_id)
+        if not post:
+            return jsonify(error="Post not found"), 404
+
+        data = request.get_json()
+        winner = data.get('winner')
+        second = data.get('second')
+
+        if not winner or not second:
+            return jsonify(error="Missing winner or second"), 400
+
+        post.winner = winner
+        post.second = second
+        db.session.commit()
+
+        return jsonify(success=True)
+
+    return app
 
 if __name__ == "__main__":
     app = create_app()
