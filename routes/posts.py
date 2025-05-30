@@ -446,7 +446,15 @@ def get_status(post_id):
     flag_users = [f.flagger for f in Flag.query.filter_by(post_id=post_id).all()]
     votes = Vote.query.filter_by(post_id=post_id).all()
     ranking = Counter(v.candidate for v in votes)
-
+    comments = Comment.query.filter_by(post_id=post_id).all()
+    comment_list = [
+          {
+        "commenter": c.commenter,
+        "text": c.text,
+        "votes": Vote.query.filter_by(post_id=post_id, candidate=c.commenter).count()
+          }
+      for c in comments
+    ]
 
     return success({
         "id": post.id,
@@ -463,7 +471,8 @@ def get_status(post_id):
         "flags": len(flag_users),
         "like_users": like_users,
         "flag_users": flag_users,
-        "ranking": dict(ranking)
+        "ranking": dict(ranking),
+        "comments": comment_list
 
     }, 200)
 

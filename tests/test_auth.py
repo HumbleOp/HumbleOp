@@ -9,7 +9,7 @@ def test_register_login_and_duplicate(client):
     # login
     rv = client.post("/login", json={"username": "alice", "password": "pwd"})
     assert rv.status_code == 200
-    token2 = rv.get_json()["token"]
+    token2 = rv.get_json()["access_token"]
     assert token2 != token1  # token rigenerato
 
     # registrazione duplicata (username)

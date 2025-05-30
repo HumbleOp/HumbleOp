@@ -5,7 +5,7 @@ def test_double_vote_not_allowed(client, unique_post_id, alice_token, bob_token)
 
     # Commentatore terzo
     client.post("/register", json={"username": "cm1", "password": "p", "email": "cm1@example.com"})
-    cm_token = client.post("/login", json={"username": "cm1", "password": "p"}).json()["token"]
+    cm_token = client.post("/login", json={"username": "cm1", "password": "p"}).json()["access_token"]
     client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {cm_token}"}, json={"text": "Ciao"})
 
     # Bob vota una volta (valido)

@@ -9,7 +9,7 @@ export default function TestTools() {
   const [comments, setComments] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState('');
-  const testUsers = ['user1', 'user2', 'user3', 'user4', 'user5', 'user6', 'user6', 'user7'];
+  const testUsers = ['user1', 'user2', 'user3', 'user4', 'user5', 'user6', 'user7'];
   const logStep = msg => setLog(log => [...log, msg]);
 
   useEffect(() => {
@@ -278,11 +278,11 @@ async function loginSilent(username) {
 
     {comments.length > 0 ? (
     <ul className="mt-2 space-y-1 text-sm">
-        {comments.map((c, i) => (
-        <li key={i}>
-            <strong>{c.commenter}</strong>: {c.text} ({c.votes} votes)
+      {comments.map((c) => (
+        <li key={`${c.commenter}-${c.text}`}>
+          <strong>{c.commenter}</strong>: {c.text} ({c.votes} votes)
         </li>
-        ))}
+      ))}
     </ul>
     ) : (
     <p className="text-sm text-gray-500 mt-2">No comments yet.</p>
@@ -296,10 +296,10 @@ async function loginSilent(username) {
         className="border px-2 py-1 rounded"
         >
         <option value="">-- Select a comment author --</option>
-        {comments.map((c, i) => (
-            <option key={i} value={c.commenter}>
+        {comments.map((c) => (
+          <option key={c.commenter} value={c.commenter}>
             {c.commenter}
-            </option>
+          </option>
         ))}
         </select>
     </div>

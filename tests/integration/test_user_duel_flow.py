@@ -17,7 +17,7 @@ def test_full_user_duel_flow(client, auth_token):
     bob_token = client.post("/login", json={
         "username": bob_name,
         "password": "hunter2"
-    }).get_json()["token"]
+    }).get_json()["access_token"]
 
     client.post("/register", json={
         "username": alice_name,
@@ -27,7 +27,7 @@ def test_full_user_duel_flow(client, auth_token):
     alice_token = client.post("/login", json={
         "username": alice_name,
         "password": "hunter2"
-    }).get_json()["token"]
+    }).get_json()["access_token"]
 
     client.post("/register", json={
         "username": charlie_name,
@@ -37,7 +37,7 @@ def test_full_user_duel_flow(client, auth_token):
     charlie_token = client.post("/login", json={
         "username": charlie_name,
         "password": "hunter2"
-    }).get_json()["token"]
+    }).get_json()["access_token"]
 
     for _ in range(10):
         post_id = uuid.uuid4().hex

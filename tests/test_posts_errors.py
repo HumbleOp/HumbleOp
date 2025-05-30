@@ -62,7 +62,7 @@ def test_vote_twice(client):
     pid = uuid.uuid4().hex
     client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"body": "B"})
     client.post("/register", json={"username": "y8", "password": "p", "email": "y8@example.com"})
-    tok_y = client.post("/login", json={"username": "y8", "password": "p"}).get_json()["token"]
+    tok_y = client.post("/login", json={"username": "y8", "password": "p"}).get_json()["access_token"]
     client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {tok_y}"}, json={"text": "text"})
     client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"candidate": "y8"})
     rv = client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"candidate": "y8"})

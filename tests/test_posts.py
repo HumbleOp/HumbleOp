@@ -22,7 +22,7 @@ def test_vote_assigns_insightful_badge(client):
     for i in range(25):
         uname = f"voter{i}"
         client.post("/register", json={"username": uname, "password": "x", "email": f"{uname}@example.com"})
-        t = client.post("/login", json={"username": uname, "password": "x"}).get_json()["token"]
+        t = client.post("/login", json={"username": uname, "password": "x"}).get_json()["access_token"]
         client.post(f"/vote/{pid}", headers={"Authorization": f"Bearer {t}"}, json={"candidate": "commenter"})
 
     with client.application.app_context():
@@ -78,7 +78,7 @@ def test_serial_voter_badge(client):
         client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"body": f"Post {i}"})
 
         # target commenta
-        token_t = client.post("/login", json={"username": "target", "password": "p"}).get_json()["token"]
+        token_t = client.post("/login", json={"username": "target", "password": "p"}).get_json()["access_token"]
         client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token_t}"}, json={"text": "commento"})
 
         # vuser vota per target
@@ -185,7 +185,7 @@ def test_flag_switches_to_second_if_too_many_flags(client):
     for i in range(31):
         uname = f"fuser{i}"
         client.post("/register", json={"username": uname, "password": "x", "email": f"{uname}@example.com"})
-        tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["token"]
+        tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["access_token"]
         client.post(f"/flag/{pid}", headers={"Authorization": f"Bearer {tok}"})
 
     # forza valutazione
@@ -213,12 +213,12 @@ def test_flag_does_not_switch_if_enough_likes(client):
     for i in range(3):
         uname = f"liker{i}"
         client.post("/register", json={"username": uname, "password": "x", "email": f"{uname}@example.com"})
-        tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["token"]
+        tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["access_token"]
         client.post(f"/like/{pid}", headers={"Authorization": f"Bearer {tok}"})
     for i in range(2):
         uname = f"flagger{i}"
         client.post("/register", json={"username": uname, "password": "x", "email": f"{uname}@example.com"})
-        tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["token"]
+        tok = client.post("/login", json={"username": uname, "password": "x"}).get_json()["access_token"]
         client.post(f"/flag/{pid}", headers={"Authorization": f"Bearer {tok}"})
     res = client.get(f"/status/{pid}").get_json()
     assert res["winner"] == "c1"

@@ -9,6 +9,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { token, logout } = useAuth();
 
+
 useEffect(() => {
   async function fetchProfile() {
     try {

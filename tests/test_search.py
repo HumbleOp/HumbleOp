@@ -7,7 +7,7 @@ def register_and_post(client, username, body):
         "password": "p",
         "email": f"{username}@example.com"
     })
-    token = client.post("/login", json={"username": username, "password": "p"}).get_json()["token"]
+    token = client.post("/login", json={"username": username, "password": "p"}).get_json()["access_token"]
     pid = uuid.uuid4().hex
     client.post(f"/create_post/{pid}", headers={"Authorization": f"Bearer {token}"}, json={"body": body})
     return username, pid

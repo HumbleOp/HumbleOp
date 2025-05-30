@@ -2,7 +2,7 @@
 def test_get_posts_by_tag(client):
     client.post("/register", json={"username": "t1", "password": "p", "email": "t1@example.com"})
     res = client.post("/login", json={"username": "t1", "password": "p"})
-    token = res.json()["token"]
+    token = res.json()["access_token"]
 
     pid = "tagtest001"
     client.post(
@@ -13,7 +13,7 @@ def test_get_posts_by_tag(client):
 
     # Utente diverso commenta
     client.post("/register", json={"username": "t2", "password": "p", "email": "t2@example.com"})
-    token2 = client.post("/login", json={"username": "t2", "password": "p"}).json()["token"]
+    token2 = client.post("/login", json={"username": "t2", "password": "p"}).json()["access_token"]
     client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token2}"}, json={"text": "Test comment"})
 
     res = client.get("/tags/python")
@@ -27,7 +27,7 @@ def test_get_posts_by_tag(client):
 def test_list_popular_tags(client):
     client.post("/register", json={"username": "taguser", "password": "p", "email": "taguser@example.com"})
     res = client.post("/login", json={"username": "taguser", "password": "p"})
-    token = res.json()["token"]
+    token = res.json()["access_token"]
 
     pid = "sampletagpost"
     client.post(
@@ -37,7 +37,7 @@ def test_list_popular_tags(client):
     )
 
     client.post("/register", json={"username": "commenter", "password": "p", "email": "commenter@example.com"})
-    token2 = client.post("/login", json={"username": "commenter", "password": "p"}).json()["token"]
+    token2 = client.post("/login", json={"username": "commenter", "password": "p"}).json()["access_token"]
     client.post(f"/comment/{pid}", headers={"Authorization": f"Bearer {token2}"}, json={"text": "Another test comment"})
 
     res = client.get("/tags?limit=5")

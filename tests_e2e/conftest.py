@@ -16,10 +16,10 @@ def unique_post_id():
 def alice_token(client):
     client.post("/register", json={"username": "alice", "password": "p", "email": "alice@example.com"})
     r = client.post("/login", json={"username": "alice", "password": "p"})
-    return r.json()["token"]
+    return r.json()["access_token"]
 
 @pytest.fixture
 def bob_token(client):
     client.post("/register", json={"username": "bob", "password": "p", "email": "bob@example.com"})
     r = client.post("/login", json={"username": "bob", "password": "p"})
-    return r.json()["token"]
+    return r.json()["access_token"]

@@ -69,7 +69,7 @@ def auth_token(client):
         "password": "secret"
     })
     assert resp.status_code == 200, f"Login failed: {resp.data}"
-    token = resp.get_json().get("token")
-    assert token, "Login response JSON must include 'token'"
+    token = resp.get_json().get("access_token")
+    assert token, "Login response JSON must include 'access_token'"
 
     return token
