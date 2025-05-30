@@ -31,12 +31,12 @@ export default function CreatePost() {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess('Post creato con successo!');
+        setSuccess('Post created!');
         setBody('');
         setVotingHours(24);
         setTimeout(() => navigate('/profile'), 1500);
       } else {
-        setError(data.error || 'Errore');
+        setError(data.error || 'Error');
       }
     } catch (err) {
       setError(err.message);
@@ -45,16 +45,16 @@ export default function CreatePost() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2>Crea un nuovo post</h2>
+      <h2>Create a new post</h2>
       <textarea
-        placeholder="Scrivi il tuo post... Usa #tag per aggiungere tag."
+        placeholder="What's on your mind?... Use #tag to add a tag."
         value={body}
         onChange={e => setBody(e.target.value)}
         rows={6}
         style={{ width: '100%' }}
       />
       <div>
-        <label>Ore di voto: </label>
+        <label>Voting time window: </label>
         <input
           type="number"
           min="1"

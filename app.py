@@ -14,14 +14,14 @@ if os.getenv("DATABASE_URL", "").startswith("postgresql://"):
 # Factory
 
 def create_app(config=None):
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__, static_folder="static", instance_relative_config=True)
     CORS(
-    app,
-    origins=["http://localhost:3000"],
-    supports_credentials=True,
-    methods=["GET", "POST", "OPTIONS"]
-)
-
+        app,
+        origins=["http://localhost:3000"],
+        supports_credentials=True,
+        methods=["GET", "POST", "PUT", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"]
+    )
 
     app.config['SWAGGER'] = {
         'title': 'HumbleOp API',
