@@ -41,7 +41,11 @@ if (!profile) return <p>Loading profile...</p>;
       <h2>Welcome, {profile.username}!</h2>
       <p>Bio: {profile.bio || 'No bio provided'}</p>
       <p>Badges: {(profile.badges || []).join(', ')}</p>
-      <img src={profile.avatar_url} alt="avatar" style={{ maxWidth: '150px' }} />
+      <img
+        src={profile.avatar_url || '/default-avatar.png'}
+        alt="avatar"
+        style={{ maxWidth: '150px' }}
+      />
       <p>
         <Link to="/create">📝 New Post</Link>
       </p>

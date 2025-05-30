@@ -1,8 +1,10 @@
-# tests/test_utils.py
+import io
 import uuid
+from datetime import datetime
 from app import create_app
 from core.extensions import db
 from core.utils import award_badge, award_marathoner, evaluate_badges, handle_duel_timeout
+from core.utils_flag import evaluate_flags_and_maybe_switch
 from sqlalchemy import text
 from models import User, Post, Comment, Vote, Badge
 
@@ -16,14 +18,15 @@ def test_award_badge_skips_for_invalid_user():
         assert Badge.query.filter_by(user="ghost").count() == 0
 
 def test_award_badge_skips_if_already_awarded(client):
-    token = client.post("/register", json={ "username": "z", "password": "p", "email": "z@example.com" }).get_json()["token"]
+    client.post("/register", json={"username": "z", "password": "p", "email": "z@example.com"})
+    token = client.post("/login", json={"username": "z", "password": "p"}).get_json()["access_token"]
     with client.application.app_context():
         award_badge("z", "Repeat Badge")
         award_badge("z", "Repeat Badge")
         assert Badge.query.filter_by(user="z", name="Repeat Badge").count() == 1
 
 def test_award_marathoner_only_top_level(client):
-    client.post("/register", json={ "username": "m", "password": "p", "email": "m@example.com" })
+    client.post("/register", json={"username": "m", "password": "p", "email": "m@example.com"})
     with client.application.app_context():
         for i in range(100):
             db.session.add(Post(id=f"marathon_{i}", author="m", body="b", winner="m"))
@@ -41,7 +44,8 @@ def test_award_marathoner_only_top_level(client):
         assert names == ["The Great Debater"]
 
 def test_handle_duel_timeout_sets_postponed(client):
-    token = client.post("/register", json={ "username": "x1", "password": "p", "email": "x1@example.com" }).get_json()["token"]
+    client.post("/register", json={"username": "x1", "password": "p", "email": "x1@example.com"})
+    token = client.post("/login", json={"username": "x1", "password": "p"}).get_json()["access_token"]
     pid = uuid.uuid4().hex
     with client.application.app_context():
         post = Post(id=pid, author="x1", body="q", started=False, postponed=False, second="alt")
@@ -51,7 +55,8 @@ def test_handle_duel_timeout_sets_postponed(client):
         assert db.session.get(Post, pid).postponed is True
 
 def test_handle_duel_timeout_switches_winner(client):
-    token = client.post("/register", json={ "username": "x2", "password": "p", "email": "x2@example.com" }).get_json()["token"]
+    client.post("/register", json={"username": "x2", "password": "p", "email": "x2@example.com"})
+    token = client.post("/login", json={"username": "x2", "password": "p"}).get_json()["access_token"]
     pid = uuid.uuid4().hex
     with client.application.app_context():
         post = Post(id=pid, author="x2", body="q", started=False, postponed=True, second="alt")
@@ -64,7 +69,8 @@ def test_handle_duel_timeout_switches_winner(client):
 
 def test_evaluate_badges_all_three(client):
     # Insightful, Serial Voter, Consistent Debater
-    t = client.post("/register", json={ "username": "b1", "password": "p", "email": "b1@example.com" }).get_json()["token"]
+    client.post("/register", json={"username": "b1", "password": "p", "email": "b1@example.com"})
+    t = client.post("/login", json={"username": "b1", "password": "p"}).get_json()["access_token"]
 
     with client.application.app_context():
         for i in range(10):

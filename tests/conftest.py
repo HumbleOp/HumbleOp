@@ -59,9 +59,6 @@ def auth_token(client):
         "email": "alice@example.com"
     })
     assert resp.status_code == 201, f"Register failed: {resp.data}"
-    data = resp.get_json()
-    token = data.get("token")
-    assert token, "Response JSON must include 'token'"
 
     # 2) Login per rigenerare il token (alcuni test lo fanno)
     resp = client.post("/login", json={

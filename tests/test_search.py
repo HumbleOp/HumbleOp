@@ -51,11 +51,9 @@ def test_search_missing_q(client):
     assert "users" in data
     assert "posts" in data
 
-
 def test_search_sort_order(client):
-    token = client.post("/register", json={
-        "username": "chronos", "password": "p", "email": "chronos@example.com"
-    }).get_json()["token"]
+    client.post("/register", json={"username": "chronos", "password": "p", "email": "chronos@example.com"})
+    token = client.post("/login", json={"username": "chronos", "password": "p"}).get_json()["access_token"]
 
     # Post più vecchio
     pid_old = uuid.uuid4().hex

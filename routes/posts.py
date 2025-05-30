@@ -302,11 +302,12 @@ def vote(post_id):
         return error("Post not found.", 404)
     voter = g.current_user.username
     candidate = request.json.get("candidate")
+    comment = Comment.query.filter_by(post_id=post_id, commenter=candidate).first()
     if not Comment.query.filter_by(post_id=post_id, commenter=candidate).first():
         return error(f"Candidate '{candidate}' has not commented.", 400)
     if Vote.query.filter_by(post_id=post_id, voter=voter).first():
         return error(f"User '{voter}' has already voted.", 400)
-    db.session.add(Vote(post_id=post_id, voter=voter, candidate=candidate))
+    db.session.add(Vote(post_id=post_id, voter=voter, candidate=candidate, comment_id=comment.id))
     db.session.commit()
     award_badge(voter, "First Responder")
     total_votes = Vote.query.filter_by(candidate=candidate).count()

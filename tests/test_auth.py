@@ -1,10 +1,8 @@
-# tests/test_auth.py
-
 def test_register_login_and_duplicate(client):
     # registra utente con email
-    rv = client.post("/register", json={"username": "alice", "password": "pwd", "email": "alice@example.com"})
-    assert rv.status_code == 201
-    token1 = rv.get_json()["token"]
+    client.post("/register", json={"username": "alice", "password": "pwd", "email": "alice@example.com"})
+    login_resp = client.post("/login", json={"username": "alice", "password": "pwd"})
+    token1 = login_resp.get_json()["access_token"]
 
     # login
     rv = client.post("/login", json={"username": "alice", "password": "pwd"})
@@ -19,6 +17,7 @@ def test_register_login_and_duplicate(client):
     # registrazione duplicata (email)
     rv = client.post("/register", json={"username": "bob", "password": "pwd", "email": "alice@example.com"})
     assert rv.status_code == 409
+
 
 
 def test_login_fail_wrong_password(client):
