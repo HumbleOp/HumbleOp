@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useApi } from '../hooks/useApi';
+import { toast } from 'react-hot-toast';
 
 export default function DuelPage() {
   const { id } = useParams();
@@ -13,7 +14,6 @@ export default function DuelPage() {
   const [comments, setComments] = useState([]);
   const [text, setText] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
-  const [success, setSuccess] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -31,7 +31,7 @@ export default function DuelPage() {
         navigate(`/victory/${id}`);
       }
     } catch {
-      // errore già gestito in useApi
+      // error already managed by useApi
     }
   }, [id, token, navigate, request]);
 
@@ -41,14 +41,13 @@ export default function DuelPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setSuccess("");
     try {
       await request(`/comment/${id}`, 'POST', { text });
-      setSuccess("Comment submitted!");
+      toast.success("Comment submitted!");
       setText("");
       setComments([...comments, { commenter: currentUser, text, votes: 0 }]);
     } catch {
-      // errore già gestito in useApi
+      // error already managed by useApi
     }
   }
 
@@ -109,8 +108,7 @@ export default function DuelPage() {
           ></textarea>
           <button type="submit" className="mt-2 bg-blue-600 text-white px-4 py-2 rounded" disabled={loading}>
             {loading ? 'Sending...' : 'Send'}
-          </button>
-          {success && <p className="text-green-600 mt-1">{success}</p>}
+          </button>          
         </form>
       )}
 

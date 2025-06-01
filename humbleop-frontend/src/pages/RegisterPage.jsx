@@ -1,17 +1,14 @@
 // src/pages/RegisterPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ username: '', password: '', email: '' });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   async function handleRegister(e) {
     e.preventDefault();
-    setError('');
-    setSuccess('');
 
     try {
       const res = await fetch('http://localhost:5000/register', {
@@ -22,14 +19,14 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (res.ok) {
-        setSuccess('Registration successful! Redirecting...');
+        toast.success('Registration successful! Redirecting...');
         setTimeout(() => navigate('/'), 1500);
         return;
       } else {
-        setError(data.error || 'Registration failed');
+        toast.error(data.error || 'Registration failed');
       }
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message || 'Registration failed');
     }
   }
 
@@ -53,8 +50,6 @@ export default function RegisterPage() {
         onChange={e => setForm({ ...form, password: e.target.value })}
       />
       <button type="submit">Register</button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {success && <p style={{ color: 'green' }}>{success}</p>}
     </form>
   );
 }

@@ -2,11 +2,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { toast} from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [bioInput, setBioInput] = useState('');
-  const [message, setMessage] = useState('');
+  const [editingBio, setEditingBio] = useState(false);
+  const [editingAvatar, setEditingAvatar] = useState(false);
   const fileRef = useRef(null);
   const navigate = useNavigate();
   const { token, logout } = useAuth();
@@ -35,7 +37,6 @@ export default function ProfilePage() {
     }
   }, [token, logout, navigate]);
 
-  // Aggiorna la bio quando arriva il profilo
   useEffect(() => {
     if (profile?.bio !== undefined) {
       setBioInput(profile.bio);
@@ -54,10 +55,11 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Update failed');
-      setMessage('Profile updated.');
+      toast.success('Bio updated')
       setProfile(data.profile);
+      setEditingBio(false);
     } catch (err) {
-      setMessage(err.message || 'Update failed.');
+      toast.error(err.message || 'Update failed.');
     }
   }
 
@@ -78,10 +80,11 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setMessage('Avatar updated.');
+      toast.success('Avatar updated.');
       setProfile(prev => ({ ...prev, avatar_url: data.avatar_url }));
+      setEditingAvatar(false);
     } catch (err) {
-      setMessage(err.message || 'Upload failed.');
+      toast.error(err.message || 'Upload failed.');
     }
   }
 
@@ -90,48 +93,48 @@ export default function ProfilePage() {
   return (
     <div>
       <h2>Welcome, {profile.username}!</h2>
-      <p>Bio: {profile.bio || 'No bio provided'}</p>
+
+      <div style={{ marginBottom: '1em' }}>
+        <strong>Bio:</strong><br />
+        {editingBio || !profile.bio ? (
+          <div>
+            <textarea
+              value={bioInput}
+              onChange={e => setBioInput(e.target.value)}
+              rows={3}
+              style={{ width: '100%' }}
+            />
+            <button onClick={updateProfile}>Save Bio</button>
+          </div>
+        ) : (
+          <p>
+            {profile.bio} <button onClick={() => setEditingBio(true)}>Edit Bio</button>
+          </p>
+        )}
+      </div>
+
+      <div style={{ marginBottom: '1em' }}>
+        <strong>Avatar:</strong><br />
+        {profile.avatar_url && !editingAvatar ? (
+          <>
+            <img
+              src={`http://localhost:5000${profile.avatar_url}?t=${Date.now()}`}
+              alt="avatar"
+              style={{ maxWidth: '150px' }}
+            /><br />
+            <button onClick={() => setEditingAvatar(true)}>Edit Avatar</button>
+          </>
+        ) : (
+          <div>
+            <input type="file" ref={fileRef} accept="image/*" />
+            <button onClick={uploadAvatar}>Upload Avatar</button>
+          </div>
+        )}
+      </div>
+
       <p>Badges: {(profile.badges || []).join(', ')}</p>
-      <img
-        src={profile.avatar_url ? `http://localhost:5000${profile.avatar_url}` : '/default-avatar.png'}
-        alt="avatar"
-        style={{ maxWidth: '150px' }}
-      />
-
-      <div style={{ marginTop: '1em' }}>
-        <label>Update Bio:</label>
-        <textarea
-          value={bioInput}
-          onChange={e => setBioInput(e.target.value)}
-          rows={3}
-          style={{ width: '100%' }}
-        />
-        <button onClick={updateProfile}>Save Bio</button>
-      </div>
-
-      <div style={{ marginTop: '1em' }}>
-        <label>Change Avatar:</label>
-        <input type="file" ref={fileRef} accept="image/*" />
-        <button onClick={uploadAvatar}>Upload Avatar</button>
-      </div>
-
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-
-      <p>
-        <Link to="/create">📝 New Post</Link>
-      </p>
-      <p>
-        <Link to="/posts">See all posts</Link>
-      </p>
-
-      <div style={{ marginTop: '1em' }}>
-        <button onClick={() => {
-          logout();
-          navigate('/');
-        }}>
-          Logout
-        </button>
-      </div>
+      <p><Link to="/create">📝 New Post</Link></p>
+      <p><Link to="/posts">See all posts</Link></p>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
+import { toast } from 'react-hot-toast'
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -12,10 +13,7 @@ export default function PostDetail() {
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
-  const [commentError, setCommentError] = useState('');
-  const [commentSuccess, setCommentSuccess] = useState('');
   const [votedFor, setVotedFor] = useState(null);
-  const [voteStatus, setVoteStatus] = useState('');
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -50,27 +48,25 @@ export default function PostDetail() {
 
   async function handleCommentSubmit(e) {
     e.preventDefault();
-    setCommentError('');
-    setCommentSuccess('');
+
 
     try {
       await request(`/comment/${id}`, 'POST', { text: commentText });
-      setCommentSuccess('Comment submitted!');
+      toast.success('Comment submitted!');
       setCommentText('');
       fetchDetails();
     } catch (err) {
-      setCommentError(err.message);
+      toast.error(err.message || 'Ooops, something went wrong');
     }
   }
 
   async function handleVote(candidate) {
-    setVoteStatus('');
     try {
       await request(`/vote/${id}`, 'POST', { candidate });
-      setVoteStatus(`Voted for ${candidate}`);
+      toast.success(`Voted for ${candidate}`);
       fetchDetails();
     } catch (err) {
-      setVoteStatus(err.message);
+      toast.error(err.message || 'Ooops, something went wrong');
     }
   }
 
@@ -84,14 +80,14 @@ export default function PostDetail() {
     });
     const data = await res.json();
     if (res.ok) {
-      setVoteStatus('Vote revoked');
+      toast.success('Vote revoked');
       setVotedFor(null);
       fetchDetails();
     } else {
-      setVoteStatus(data.error || 'Unvote failed');
+      toast.error(data.error || 'Unvote failed');
     }
   } catch (err) {
-    setVoteStatus(err.message);
+    toast.error(err.message || 'Unvote failed');
   }
 }
 
@@ -153,8 +149,6 @@ export default function PostDetail() {
         </ul>
       )}
 
-      {voteStatus && <p>{voteStatus}</p>}
-
       {token && currentUser && currentUser !== post.author && (
         <form onSubmit={handleCommentSubmit} style={{ marginTop: '1em' }}>
           <h4>Leave a comment</h4>
@@ -168,8 +162,6 @@ export default function PostDetail() {
           <button type="submit" disabled={loading}>
             {loading ? 'Submitting...' : 'Submit'}
           </button>
-          {commentError && <p style={{ color: 'red' }}>{commentError}</p>}
-          {commentSuccess && <p style={{ color: 'green' }}>{commentSuccess}</p>}
         </form>
       )}
 

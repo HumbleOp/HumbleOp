@@ -2,17 +2,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
   async function handleLogin(e) {
     e.preventDefault();
-    setError('');
     try {
       const res = await fetch('http://localhost:5000/login', {
         method: 'POST',
@@ -23,12 +22,13 @@ export default function LoginPage() {
       console.log('Login response:', data);
       if (res.ok) {
         login(data.access_token);
+        toast.success('Login successful!');
         navigate('/profile');
       } else {
-        setError(data.error || 'Login failed');
+        toast.error(data.error || 'Login failed');
       }
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message || 'Login error');
     }
   }
 
@@ -51,7 +51,6 @@ export default function LoginPage() {
           />
         </div>
         <button type="submit">Login</button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
       </form>
 
       <p>

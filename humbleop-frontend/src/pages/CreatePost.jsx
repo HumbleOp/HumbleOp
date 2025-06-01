@@ -2,19 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'react-hot-toast';
 
 export default function CreatePost() {
   const [body, setBody] = useState('');
   const [votingHours, setVotingHours] = useState(24);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
   const { token } = useAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     const postId = uuidv4().slice(0, 8);
 
     try {
@@ -31,15 +28,15 @@ export default function CreatePost() {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess('Post created!');
+        toast.success('Post created!');
         setBody('');
         setVotingHours(24);
         setTimeout(() => navigate('/profile'), 1500);
       } else {
-        setError(data.error || 'Error');
+        toast.error(data.error || 'Error');
       }
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message || 'Something went wrong');
     }
   }
 
@@ -63,8 +60,6 @@ export default function CreatePost() {
         />
       </div>
       <button type="submit">Pubblica</button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {success && <p style={{ color: 'green' }}>{success}</p>}
     </form>
   );
 }
