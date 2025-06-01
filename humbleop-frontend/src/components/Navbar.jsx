@@ -2,6 +2,7 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
+import logo from "../assets/logo.png";
 
 export default function Navbar() {
   const { token, logout } = useAuth();
@@ -23,9 +24,10 @@ export default function Navbar() {
   return (
     <nav className="flex items-center justify-between px-6 py-3 bg-white shadow border-b sticky top-0 z-50">
       <div className="flex gap-4 items-center">
-        <NavLink to="/posts" className="text-xl font-bold text-blue-700">
-          HumbleOp
-        </NavLink>
+        <Link to="/posts" className="flex items-center gap-2">
+          <img src={logo} alt="HumbleOp Logo" className="h-6 w-6" />
+          <span className="text-xl font-bold text-blue-700">HumbleOp</span>
+        </Link>
         <NavLink
           to="/posts"
           className={({ isActive }) =>

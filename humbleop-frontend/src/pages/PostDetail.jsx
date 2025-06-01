@@ -1,8 +1,9 @@
+// src/pages/PostDetail.jsx
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
-import { toast } from 'react-hot-toast'
+import { toast } from 'react-hot-toast';
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -38,7 +39,7 @@ export default function PostDetail() {
         }
       }
     } catch {
-        // error already handled by useApi
+        // error handled by useApi
     }
   }, [id, token, request]);
 
@@ -48,15 +49,13 @@ export default function PostDetail() {
 
   async function handleCommentSubmit(e) {
     e.preventDefault();
-
-
     try {
       await request(`/comment/${id}`, 'POST', { text: commentText });
       toast.success('Comment submitted!');
       setCommentText('');
       fetchDetails();
     } catch (err) {
-      toast.error(err.message || 'Ooops, something went wrong');
+      toast.error(err.message || 'Failed to comment');
     }
   }
 
@@ -66,108 +65,122 @@ export default function PostDetail() {
       toast.success(`Voted for ${candidate}`);
       fetchDetails();
     } catch (err) {
-      toast.error(err.message || 'Ooops, something went wrong');
+      toast.error(err.message || 'Vote failed');
     }
   }
 
   async function handleUnvote() {
-  try {
-    const res = await fetch(`http://localhost:5000/unvote/${id}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token
+    try {
+      const res = await fetch(`http://localhost:5000/unvote/${id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Vote revoked');
+        setVotedFor(null);
+        fetchDetails();
+      } else {
+        toast.error(data.error || 'Unvote failed');
       }
-    });
-    const data = await res.json();
-    if (res.ok) {
-      toast.success('Vote revoked');
-      setVotedFor(null);
-      fetchDetails();
-    } else {
-      toast.error(data.error || 'Unvote failed');
+    } catch (err) {
+      toast.error(err.message || 'Unvote failed');
     }
-  } catch (err) {
-    toast.error(err.message || 'Unvote failed');
   }
-}
 
-
-
-  if (loading || !post) return <p>Loading post...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
-
+  if (loading || !post) return <p className="text-center text-white py-8">Loading post...</p>;
+  if (error) return <p className="text-red-400 text-center py-8">{error}</p>;
 
   return (
-    <div>
-      <h2>Post by {post.author}</h2>
-      <p>{post.body}</p>
+    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC]">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">Post by {post.author}</h2>
+        <p className="mb-4">{post.body}</p>
 
-      {post.media?.length > 0 && (
-        <div>
-          <strong>Media:</strong>
-          <ul>
-            {post.media.map((url, index) => (
-              <li key={index}><a href={url} target="_blank" rel="noreferrer">{url}</a></li>
+        {post.media?.length > 0 && (
+          <div className="mb-4">
+            <strong className="text-[#5D749B]">Media:</strong>
+            <ul className="list-disc list-inside">
+              {post.media.map((url, index) => (
+                <li key={index}>
+                  <a href={url} target="_blank" rel="noreferrer" className="text-blue-300 underline">{url}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="mb-6 space-y-1">
+          <p><strong className="text-[#5D749B]">Winner:</strong> {post.winner || '—'}</p>
+          <p><strong className="text-[#5D749B]">Second:</strong> {post.second || '—'}</p>
+          <p><strong className="text-[#5D749B]">Votes end in:</strong> {post.voting_ends_in} seconds</p>
+          {post.winner && post.second && post.started && (
+            <p className="text-sm text-yellow-400">
+              <Link to={`/duel/${post.id}`} className="underline hover:text-yellow-200">
+                👉 Go to duel
+              </Link>
+            </p>
+          )}
+        </div>
+
+        <h3 className="text-lg font-semibold mb-2 text-[#7FAF92]">Comments</h3>
+        {comments.length === 0 ? (
+          <p className="italic text-gray-400">No comments yet.</p>
+        ) : (
+          <ul className="space-y-3">
+            {comments.map((c, i) => (
+              <li key={i} className="border border-[#5D749B] p-3 rounded">
+                <strong>{c.commenter}:</strong> {c.text} <span className="text-sm text-gray-400">({c.votes} votes)</span>
+                {token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
+                  votedFor === null ? (
+                    <button
+                      onClick={() => handleVote(c.commenter)}
+                      className="ml-4 text-sm bg-[#7FAF92] text-black px-2 py-1 rounded hover:bg-[#5D749B]"
+                    >
+                      Vote
+                    </button>
+                  ) : votedFor === c.commenter ? (
+                    <>
+                      <span className="ml-4 text-green-400">🗳️ You voted</span>
+                      <button
+                        onClick={handleUnvote}
+                        className="ml-2 text-sm text-white bg-red-600 px-2 py-1 rounded hover:bg-red-800"
+                      >
+                        Unvote
+                      </button>
+                    </>
+                  ) : null
+                )}
+              </li>
             ))}
           </ul>
-        </div>
-      )}
+        )}
 
-      <div>
-        <p><strong>Winner:</strong> {post.winner || '—'}</p>
-        <p><strong>Second:</strong> {post.second || '—'}</p>
-        <p><strong>Votes end in:</strong> {post.voting_ends_in} seconds</p>
-        {post.winner && post.second && post.started && (
-          <p className="mt-2 text-sm text-yellow-700">
-            <Link to={`/duel/${post.id}`} className="underline hover:text-yellow-900">
-              👉 Go to duel
-            </Link>
-          </p>
+        {token && currentUser && currentUser !== post.author && (
+          <form onSubmit={handleCommentSubmit} className="mt-6">
+            <h4 className="mb-2 text-[#5D749B] font-semibold">Leave a comment</h4>
+            <textarea
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              rows={4}
+              className="w-full p-2 border rounded text-black"
+              placeholder="Write your comment..."
+            />
+            <button
+              type="submit"
+              className="mt-2 bg-[#7FAF92] text-black px-4 py-2 rounded hover:bg-[#5D749B]"
+            >
+              Submit
+            </button>
+          </form>
+        )}
+
+        {token && currentUser === post.author && (
+          <p className="mt-6 text-gray-400 italic">You cannot comment on your own post.</p>
         )}
       </div>
-
-      <h3>Comments</h3>
-      {comments.length === 0 ? (
-        <p>No comments yet.</p>
-      ) : (
-        <ul>
-          {comments.map((c, i) => (
-            <li key={i}>
-              <strong>{c.commenter}:</strong> {c.text} ({c.votes} votes)
-              {token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
-                votedFor === null ? (
-                  <button onClick={() => handleVote(c.commenter)}>Vote</button>
-                ) : votedFor === c.commenter ? (
-                  <>
-                    <span style={{ marginLeft: '1em', color: 'green' }}>🗳️ You voted for this comment</span>
-                    <button onClick={handleUnvote} style={{ marginLeft: '1em' }}>Unvote</button>
-                  </>
-                ) : null
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {token && currentUser && currentUser !== post.author && (
-        <form onSubmit={handleCommentSubmit} style={{ marginTop: '1em' }}>
-          <h4>Leave a comment</h4>
-          <textarea
-            value={commentText}
-            onChange={e => setCommentText(e.target.value)}
-            rows={4}
-            style={{ width: '100%' }}
-            placeholder="Write your comment..."
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Submitting...' : 'Submit'}
-          </button>
-        </form>
-      )}
-
-      {token && currentUser === post.author && (
-        <p>You cannot comment on your own post.</p>
-      )}
     </div>
   );
 }

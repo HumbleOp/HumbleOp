@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { toast} from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -55,7 +55,7 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Update failed');
-      toast.success('Bio updated')
+      toast.success('Bio updated');
       setProfile(data.profile);
       setEditingBio(false);
     } catch (err) {
@@ -88,53 +88,97 @@ export default function ProfilePage() {
     }
   }
 
-  if (!profile) return <p>Loading profile...</p>;
+  if (!profile) return <p className="text-center py-8">Loading profile...</p>;
 
   return (
-    <div>
-      <h2>Welcome, {profile.username}!</h2>
+    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC]">
+      <div className="max-w-4xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-6 text-[#7FAF92]">Welcome, {profile.username}!</h2>
 
-      <div style={{ marginBottom: '1em' }}>
-        <strong>Bio:</strong><br />
-        {editingBio || !profile.bio ? (
-          <div>
-            <textarea
-              value={bioInput}
-              onChange={e => setBioInput(e.target.value)}
-              rows={3}
-              style={{ width: '100%' }}
-            />
-            <button onClick={updateProfile}>Save Bio</button>
+        <div className="grid md:grid-cols-3 gap-6 items-start">
+          <div className="col-span-1">
+            <strong className="block mb-2 text-[#5D749B]">Avatar:</strong>
+            {profile.avatar_url && !editingAvatar ? (
+              <>
+                <img
+                  src={`http://localhost:5000${profile.avatar_url}?t=${Date.now()}`}
+                  alt="avatar"
+                  className="rounded shadow w-40 h-40 object-cover"
+                />
+                <button
+                  onClick={() => setEditingAvatar(true)}
+                  className="mt-2 text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                >
+                  Edit Avatar
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <input type="file" ref={fileRef} accept="image/*" />
+                <button
+                  onClick={uploadAvatar}
+                  className="text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                >
+                  Upload Avatar
+                </button>
+              </div>
+            )}
           </div>
-        ) : (
-          <p>
-            {profile.bio} <button onClick={() => setEditingBio(true)}>Edit Bio</button>
-          </p>
-        )}
-      </div>
 
-      <div style={{ marginBottom: '1em' }}>
-        <strong>Avatar:</strong><br />
-        {profile.avatar_url && !editingAvatar ? (
-          <>
-            <img
-              src={`http://localhost:5000${profile.avatar_url}?t=${Date.now()}`}
-              alt="avatar"
-              style={{ maxWidth: '150px' }}
-            /><br />
-            <button onClick={() => setEditingAvatar(true)}>Edit Avatar</button>
-          </>
-        ) : (
-          <div>
-            <input type="file" ref={fileRef} accept="image/*" />
-            <button onClick={uploadAvatar}>Upload Avatar</button>
+          <div className="col-span-2">
+            <strong className="block mb-2 text-[#5D749B]">Bio:</strong>
+            {editingBio || !profile.bio ? (
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={bioInput}
+                  onChange={e => setBioInput(e.target.value)}
+                  rows={4}
+                  className="w-full p-2 border rounded text-black"
+                />
+                <button
+                  onClick={updateProfile}
+                  className="self-start text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                >
+                  Save Bio
+                </button>
+              </div>
+            ) : (
+              <p className="flex justify-between items-center">
+                <span>{profile.bio}</span>
+                <button
+                  onClick={() => setEditingBio(true)}
+                  className="text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                >
+                  Edit Bio
+                </button>
+              </p>
+            )}
+
+            <div className="mt-6">
+              <strong className="block text-[#5D749B] mb-2">Badges:</strong>
+              <div className="flex flex-wrap gap-2">
+                {(profile.badges || []).map((badge, i) => (
+                  <span
+                    key={i}
+                    className="text-xs bg-[#E8E5DC] text-[#101B13] px-2 py-1 rounded shadow"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-4 text-sm">
+              <Link to="/create" className="text-[#7FAF92] underline">
+                📝 New Post
+              </Link>
+              <Link to="/posts" className="text-[#7FAF92] underline">
+                See all posts
+              </Link>
+            </div>
           </div>
-        )}
+        </div>
       </div>
-
-      <p>Badges: {(profile.badges || []).join(', ')}</p>
-      <p><Link to="/create">📝 New Post</Link></p>
-      <p><Link to="/posts">See all posts</Link></p>
     </div>
   );
 }
