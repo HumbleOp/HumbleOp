@@ -1,38 +1,34 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from "react-router-dom";
-import { AuthProvider, useAuth } from './context/AuthContext';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ProfilePage from './pages/ProfilePage';
-import CreatePost from './pages/CreatePost';
-import PostList from './pages/PostList';
-import PostDetail from './pages/PostDetail';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ProfilePage from "./pages/ProfilePage";
+import CreatePost from "./pages/CreatePost";
+import PostList from "./pages/PostList";
+import PostDetail from "./pages/PostDetail";
 import PostVictoryPage from "./pages/PostVictoryPage";
 import CompletedPosts from "./pages/CompletedPosts";
-import DuelPage from './pages/DuelPage';
-import TestTools from './pages/TestTools';
+import DuelPage from "./pages/DuelPage";
+import TestTools from "./pages/TestTools";
+import SearchResults from "./pages/SearchResults";
 import Navbar from "./components/Navbar";
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from "react-hot-toast";
 
-
-
-
-function RoutesWithAuth() {
+function Protected({ children }) {
   const { token } = useAuth();
+  return token ? children : <Navigate to="/" />;
+}
 
-  return (
-    <Routes>
-      <Route path="/" element={token ? <Navigate to="/profile" /> : <LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/" />} />
-      <Route path="/create" element={token ? <CreatePost /> : <Navigate to="/" />} />
-      <Route path="/posts" element={<PostList />} />
-      <Route path="/post/:id" element={<PostDetail />} />
-      <Route path="/victory/:id" element={<PostVictoryPage />} />
-      <Route path="/completed" element={<CompletedPosts />} />
-      <Route path="/duel/:id" element={token ? <DuelPage /> : <Navigate to="/" />} />
-      <Route path="/test" element={<TestTools />} />
-    </Routes>
-  );
+function NavbarWrapper() {
+  const location = useLocation();
+  const hide = ["/", "/register"].includes(location.pathname);
+  return !hide ? <Navbar /> : null;
 }
 
 function App() {
@@ -40,12 +36,23 @@ function App() {
     <AuthProvider>
       <Router>
         <Toaster position="top-right" />
-          <Navbar />
-        <RoutesWithAuth />
+        <NavbarWrapper />
+        <Routes>
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/search" element={<Protected><SearchResults /></Protected>} />
+          <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
+          <Route path="/create" element={<Protected><CreatePost /></Protected>} />
+          <Route path="/posts" element={<Protected><PostList /></Protected>} />
+          <Route path="/post/:id" element={<Protected><PostDetail /></Protected>} />
+          <Route path="/victory/:id" element={<Protected><PostVictoryPage /></Protected>} />
+          <Route path="/completed" element={<Protected><CompletedPosts /></Protected>} />
+          <Route path="/duel/:id" element={<Protected><DuelPage /></Protected>} />
+          <Route path="/test" element={<Protected><TestTools /></Protected>} />
+        </Routes>
       </Router>
     </AuthProvider>
   );
 }
-
 
 export default App;

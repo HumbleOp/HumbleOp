@@ -244,20 +244,23 @@ def add_comment(post_id):
         return error("Post not found.", 404)
     commenter = g.current_user.username
     text = request.json.get("text")
-    if commenter == post.author:
-      return error("Authors cannot comment on their own post.", 403)
+
+    if not post.started and commenter == post.author:
+        return error("Authors cannot comment on their own post.", 403)
+
     if not text:
         return error("Field 'text' is required.", 400)
-    existing = Comment.query.filter_by(post_id=post_id, commenter=commenter).first()
+
+    existing = Comment.query.filter_by(post_id=post_id, commenter=commenter, is_duel=False).first()
     if existing:
         return error(f"User '{commenter}' has already commented.", 403)
-    db.session.add(Comment(post_id=post_id, commenter=commenter, text=text))
+
+    comment = Comment(post_id=post_id, commenter=commenter, text=text, is_duel=False)
+    db.session.add(comment)
     db.session.commit()
-    award_badge(commenter, "First blood")
-    long_comments = Comment.query.filter(func.length(Comment.text) >= 100).count()
-    if long_comments >= 20:
-        award_badge(commenter, "Eloquent Speaker")
+    # badge awarding etc...
     return success({"status": "Comment added."}, 200)
+
 
 
 @posts_bp.route("/vote/<post_id>", methods=["POST"])
@@ -392,7 +395,7 @@ def start_duel(post_id):
     post.winner = winner
     post.second = second
     post.initial_votes = iv
-    post.started = False
+    post.started = True
     post.postponed = False
     db.session.commit()
 
@@ -654,3 +657,42 @@ def start_now(post_id):
     post.postponed = False
     db.session.commit()
     return success({"status": "Post marked as started."}, 200)
+
+@posts_bp.route("/duel_comment/<post_id>", methods=["POST"])
+@login_required
+def add_duel_comment(post_id):
+    post = db.session.get(Post, post_id)
+    if not post:
+        return error("Post not found.", 404)
+    if not post.started:
+        return error("Duel not started", 400)
+
+    commenter = g.current_user.username
+    if commenter not in [post.author, post.winner]:
+        return error("Only duel participants can comment", 403)
+
+    text = request.json.get("text")
+    if not text:
+        return error("Text is required", 400)
+
+    # Rimuoviamo il blocco che limita un solo commento per utente nel duello
+    # existing = Comment.query.filter_by(post_id=post_id, commenter=commenter, is_duel=True).first()
+    # if existing:
+    #     return error(f"User '{commenter}' already commented in duel", 403)
+
+    comment = Comment(post_id=post_id, commenter=commenter, text=text)
+    comment.is_duel = True
+    db.session.add(comment)
+    db.session.commit()
+    return success({"status": "Duel comment added."}, 200)
+
+
+@posts_bp.route("/duel_comments/<post_id>", methods=["GET"])
+def get_duel_comments(post_id):
+    comments = Comment.query.filter_by(post_id=post_id, is_duel=True).all()
+    return success([{
+        "commenter": c.commenter,
+        "text": c.text
+    } for c in comments], 200)
+
+

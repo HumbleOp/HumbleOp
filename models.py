@@ -63,6 +63,7 @@ class Comment(db.Model):
     post_id   = db.Column(db.String,  db.ForeignKey('posts.id'), nullable=False)
     commenter = db.Column(db.String,  db.ForeignKey('users.username'), nullable=False)
     text      = db.Column(db.Text,    nullable=False)
+    is_duel = db.Column(db.Boolean, default=False)
     votes_rel = db.relationship("Vote", backref="comment", lazy="dynamic", foreign_keys="Vote.comment_id")
 
 

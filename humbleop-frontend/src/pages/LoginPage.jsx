@@ -1,6 +1,6 @@
-// src/pages/LoginPage.jsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.png';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
@@ -32,12 +32,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] flex items-center justify-center">
+    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] flex flex-col items-center justify-center p-4">
+      {/* LOGO */}
+      <img
+        src={logo}
+        alt="HumbleOp Logo"
+        className="w-80 h-80 mb-10"
+      />
       <form
         onSubmit={handleLogin}
         className="bg-[#1A2A20] p-8 rounded shadow w-full max-w-md"
       >
-        <h1 className="text-2xl font-bold mb-6 text-[#7FAF92]">Welcome back</h1>
+        <h1 className="text-2xl font-bold mb-6 text-[#7FAF92]">Welcome</h1>
 
         <label className="block mb-2">Username:</label>
         <input
@@ -64,6 +70,14 @@ export default function LoginPage() {
           Login
         </button>
       </form>
+
+      {/* REGISTRATION LINK */}
+      <p className="mt-4 text-sm text-[#E8E5DC]">
+        New to HumbleOp?{' '}
+        <Link to="/register" className="text-[#7FAF92] underline hover:text-[#A1D9B4]">
+          Sign up here!
+        </Link>
+      </p>
     </div>
   );
 }
