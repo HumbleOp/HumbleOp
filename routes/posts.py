@@ -7,7 +7,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from sqlalchemy import func
 from models import User, Post, Comment, Vote, Like, Flag, Badge, Tag
-from core.utils_flag import evaluate_flags_and_maybe_switch
+from core.utils_flag import evaluate_flags_and_maybe_switch, compute_flag_status
 from config import MIN_INITIAL_VOTES, MAX_INITIAL_VOTES
 
 posts_bp = Blueprint("posts", __name__)
@@ -397,6 +397,7 @@ def start_duel(post_id):
     post.initial_votes = iv
     post.started = True
     post.postponed = False
+    post.duel_start_time = datetime.now()
     db.session.commit()
 
     scheduler.add_job(
@@ -437,10 +438,12 @@ def get_status(post_id):
       404:
         description: Post not found
     """
+
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
 
+    flag_analysis = compute_flag_status(post)
     now = datetime.now()
     countdown = 0
     if post.voting_deadline:
@@ -476,7 +479,8 @@ def get_status(post_id):
         "like_users": like_users,
         "flag_users": flag_users,
         "ranking": dict(ranking),
-        "comments": comment_list
+        "comments": comment_list,
+        "flag_analysis": flag_analysis
 
     }, 200)
 
@@ -611,22 +615,31 @@ def flag(post_id):
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
-    if not post.started or not post.duel_start_time or datetime.now() < post.duel_start_time:
+    
+    if not post.started:
         return error("Duel has not started yet.", 400)
+    
     flagger = g.current_user.username
+
     if Flag.query.filter_by(post_id=post_id, flagger=flagger).first():
         return error(f"User '{flagger}' has already flagged this post.", 403)
+    
     if not post.winner:
         return error("Post has no winner yet.", 400)
+    
     if flagger in (post.author, post.winner):
         return error("Authors and winners cannot flag.", 403)
+    
     db.session.add(Flag(post_id=post_id, flagger=flagger))
     db.session.commit()
+    
     switched, old, new = evaluate_flags_and_maybe_switch(post)
     if switched:
         return success({"status": "Winner switched.", "old": old, "new": new}, 200)
+    
     print("[DEBUG] SWITCH FLAG? winner=", post.winner)
     return success({"status": "Flag registered."}, 200)
+
 
 @posts_bp.route("/start_now/<post_id>", methods=["POST"])
 @login_required

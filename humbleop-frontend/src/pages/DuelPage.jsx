@@ -17,7 +17,6 @@ export default function DuelPage() {
 
   const fetchData = useCallback(async () => {
     if (!token) return;
-
     try {
       const postData = await request(`/status/${id}`);
       const duelCommentsData = await request(`/duel_comments/${id}`);
@@ -26,15 +25,11 @@ export default function DuelPage() {
       setPost(postData);
       setComments(Array.isArray(duelCommentsData) ? duelCommentsData : []);
       setCurrentUser(profileData.username);
-
-      if (!postData.started) {
-        navigate(`/victory/${id}`);
-      }
     } catch (err) {
       console.error("Duel fetch failed:", err);
       toast.error("Failed to load duel data");
     }
-  }, [id, token, navigate, request]);
+  }, [id, token, request]);
 
   useEffect(() => {
     fetchData();
@@ -50,7 +45,6 @@ export default function DuelPage() {
       await request(`/duel_comment/${id}`, 'POST', { text });
       toast.success("Comment submitted!");
       setText("");
-      // Refresh comments after submitting
       const updatedComments = await request(`/duel_comments/${id}`);
       setComments(Array.isArray(updatedComments) ? updatedComments : []);
     } catch (err) {
@@ -60,27 +54,73 @@ export default function DuelPage() {
   }
 
   if (loading && !post) return <p className="text-center text-white py-8">Loading duel...</p>;
-  if (!post) return <p className="text-center text-red-400 py-8">Post not found or not loaded.</p>;
+  
+  if (!post || !post.winner || !post.author) return <p className="text-center text-white py-8">Waiting for duel to initialize...</p>;
 
-  const duelers = [post.author, post.winner].filter(Boolean);
+  const duelers = [post.author, post.winner];
+  const duelComments = comments.filter(c => duelers.includes(c.commenter));
+const lastCommenter = duelComments.length > 0 ? duelComments[duelComments.length - 1].commenter : null;
+const currentTurnUser = lastCommenter === duelers[0] ? duelers[1] : duelers[0];
 
-  // Turno calcolato in base al numero di commenti attuali
-  const isUser1Turn = comments.length % 2 === 0;
-  const currentTurnUser = isUser1Turn ? duelers[0] : duelers[1];
+  const normalizedUser = currentUser?.trim().toLowerCase();
+const normalizedDuelers = duelers.map(d => d?.trim().toLowerCase());
+const canComment = normalizedDuelers.includes(normalizedUser) && normalizedUser === currentTurnUser?.trim().toLowerCase();
 
-  const canComment = currentUser === currentTurnUser && duelers.includes(currentUser);
-
-  console.log("post.author =", post.author);
-  console.log("post.winner =", post.winner);
-  console.log("duelers =", duelers);
-  console.log("comments =", comments);
-  console.log("currentTurnUser =", currentTurnUser);
-  console.log("currentUser =", currentUser);
-  console.log("canComment =", canComment);
-
+console.log("currentUser =", currentUser);
+console.log("duelers =", duelers);
+console.log("normalizedUser =", normalizedUser);
+console.log("normalizedDuelers =", normalizedDuelers);
+console.log("lastCommenter =", lastCommenter);
+console.log("currentTurnUser =", currentTurnUser);
+console.log("canComment =", canComment);
 
   return (
     <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] px-4 py-6">
+      {post && post.winner && currentUser && currentUser !== post.author && currentUser !== post.winner && (
+        <div className="mb-4 flex gap-4">
+          {!post.like_users?.includes(currentUser) && (
+            <button
+              className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded"
+              onClick={async () => {
+                try {
+                  await request(`/like/${post.id}`, 'POST');
+                  toast.success("You liked the winner!");
+                  fetchData();
+                } catch (err) {
+                  toast.error("Failed to like.");
+                }
+              }}
+            >
+              👍 Like {post.winner}
+            </button>
+          )}
+
+          {!post.flag_users?.includes(currentUser) && (
+            <button
+              className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded"
+              onClick={async () => {
+                try {
+                  await request(`/flag/${post.id}`, 'POST');
+                  toast.success("You flagged the winner.");
+                  fetchData();
+                } catch (err) {
+                  toast.error("Failed to flag.");
+                }
+              }}
+            >
+              🚩 Flag {post.winner}
+            </button>
+          )}
+
+          {post.like_users?.includes(currentUser) && (
+            <span className="text-green-400">You already liked {post.winner}</span>
+          )}
+
+          {post.flag_users?.includes(currentUser) && (
+            <span className="text-red-400">You already flagged {post.winner}</span>
+          )}
+        </div>
+      )}&quot;min-h-screen bg-[#101B13] text-[#E8E5DC] px-4 py-6&quot;&gt;
       <div className="max-w-3xl mx-auto">
         <h1 className="text-xl font-bold mb-2 text-[#7FAF92]">Duel in Progress</h1>
 
@@ -96,8 +136,8 @@ export default function DuelPage() {
         <div className="bg-[#1F2F25] border border-[#5D749B] rounded-xl p-4 mb-4">
           <p className="text-sm text-[#7FAF92] font-semibold mb-1">Duel Participants:</p>
           <ul className="list-disc list-inside text-sm">
-            {duelers.map(user => (
-              <li key={user}>{user}</li>
+            {duelers.map((user, i) => (
+              <li key={i}>{user}</li>
             ))}
           </ul>
         </div>
@@ -136,10 +176,41 @@ export default function DuelPage() {
           </form>
         )}
 
-        {!canComment && (
+        {!canComment && duelers.includes(currentUser) && (
           <p className="text-gray-400 italic mt-4">
-            It is {currentTurnUser || "unknown user"}&apos;s turn to comment.
+            Waiting for your turn to comment.
           </p>
+        )}
+
+        {!duelers.includes(currentUser) && (
+          <p className="text-gray-400 italic mt-4">
+            Only duel participants can comment.
+          </p>
+        )}
+
+        {post.flag_analysis && (
+          <div className="mt-8 bg-[#1A2A20] p-4 rounded-xl shadow space-y-2 border border-[#5D749B]">
+            <h3 className="font-semibold text-[#7FAF92]">Flag Analysis</h3>
+            <div className="text-sm text-gray-400 space-y-1 mt-2">
+              <p>
+                🚩 Flags: <strong>{post.flag_analysis.actual_flags}</strong> /
+                Required: <strong>{post.flag_analysis.min_flags_required}</strong>
+              </p>
+              <p>
+                👍 Likes: <strong>{post.flag_analysis.actual_likes}</strong> —
+                🗳️ Initial Votes: <strong>{post.flag_analysis.initial_votes}</strong>
+              </p>
+              <p>
+                Ratio: <strong>{(post.flag_analysis.flag_ratio * 100).toFixed(1)}%</strong> —
+                Net Score: <strong>{post.flag_analysis.net_score}</strong> /
+                Threshold: <strong>{post.flag_analysis.threshold_score}</strong>
+              </p>
+              {post.flag_analysis.actual_flags >= post.flag_analysis.min_flags_required &&
+                (post.flag_analysis.flag_ratio > 0.3 || post.flag_analysis.net_score <= post.flag_analysis.threshold_score) && (
+                  <p className="text-yellow-400 font-semibold">⚠️ Winner is at risk of being replaced</p>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

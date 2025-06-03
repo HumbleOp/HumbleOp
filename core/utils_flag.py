@@ -62,3 +62,25 @@ def evaluate_flags_and_maybe_switch(post):
         return True, old_winner, new_winner
 
     return False, None, None
+
+
+def compute_flag_status(post):
+    initial_votes = post.initial_votes or 0
+    actual_likes = db.session.query(func.count(Like.id)).filter_by(post_id=post.id).scalar() or 0
+    total_flags = db.session.query(func.count(Flag.id)).filter_by(post_id=post.id).scalar() or 0
+
+    min_flags = max(int(initial_votes * MIN_FLAGS_RATIO), 5)
+    total_interactions = initial_votes + actual_likes + total_flags
+    flag_ratio = (total_flags / total_interactions) if total_interactions > 0 else 0
+    net_score = (initial_votes + actual_likes) - total_flags
+    threshold_score = initial_votes * NET_SCORE_RATIO
+
+    return {
+        "min_flags_required": min_flags,
+        "actual_flags": total_flags,
+        "actual_likes": actual_likes,
+        "initial_votes": initial_votes,
+        "flag_ratio": round(flag_ratio, 3),
+        "net_score": net_score,
+        "threshold_score": threshold_score
+    }
