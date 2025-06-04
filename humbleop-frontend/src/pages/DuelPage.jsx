@@ -133,7 +133,9 @@ export default function DuelPage() {
 
         <div className="bg-[#1A2A20] shadow rounded-xl p-4 mb-4">
           <p className="text-sm text-gray-400">
-            Posted by <Link to={`/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+            Posted by <Link to={currentUser === post.author ? '/profile' : `/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">
+            {post.author}
+          </Link>
           </p>
           <p className="mt-2 text-lg text-[#E8E5DC]">{post.body}</p>
         </div>
@@ -143,7 +145,9 @@ export default function DuelPage() {
           <ul className="list-disc list-inside text-sm">
             {duelers.map((user, i) => (
               <li key={i}>
-              <Link to={`/profile/${user}`} className="text-[#A1D9B4] hover:underline">{user}</Link>
+              <Link to={currentUser === user ? '/profile' : `/profile/${user}`} className="text-[#A1D9B4] hover:underline">
+                {user}
+              </Link>
             </li>
             ))}
           </ul>
@@ -158,7 +162,9 @@ export default function DuelPage() {
               {comments.map((c, i) => (
                 <li key={i} className="bg-[#142017] p-3 rounded shadow">
                   <strong>
-                    <Link to={`/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">{c.commenter}</Link>
+                    <Link to={currentUser === c.commenter ? '/profile' : `/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">
+                    {c.commenter}
+                  </Link>
                   </strong>: {c.text}
                 </li>
               ))}

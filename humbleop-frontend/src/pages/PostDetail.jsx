@@ -105,7 +105,9 @@ export default function PostDetail() {
     <PageContainer>
       <div className="max-w-4xl mx-auto px-4 py-6">
         <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">
-          Post by <Link to={`/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+          <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">
+            Post by <Link to={currentUser === post.author ? '/profile' : `/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+          </h2>
         </h2>
         <p className="mb-4">{post.body}</p>
 
@@ -123,8 +125,18 @@ export default function PostDetail() {
         )}
 
         <div className="mb-6 space-y-1">
-          <p><strong className="text-[#5D749B]">Winner:</strong> {<Link to={`/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link> || '—'}</p>
-          <p><strong className="text-[#5D749B]">Second:</strong> {<Link to={`/profile/${post.SECOND}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link> || '—'}</p>
+          <p><strong className="text-[#5D749B]">Winner:</strong> {
+            post.winner ? (
+              <Link to={currentUser === post.winner ? '/profile' : `/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link>
+            ) : '—'
+          }</p>
+
+          <p><strong className="text-[#5D749B]">Second:</strong> {
+            post.second ? (
+              <Link to={currentUser === post.second ? '/profile' : `/profile/${post.second}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link>
+            ) : '—'
+          }</p>
+
           <p><strong className="text-[#5D749B]">Votes end in:</strong> {post.voting_ends_in} seconds</p>
           {post.winner && post.second && post.started && (
             <p className="text-sm text-yellow-400">
@@ -143,7 +155,9 @@ export default function PostDetail() {
             {comments.map((c, i) => (
               <li key={i} className="border border-[#5D749B] p-3 rounded">
                 <strong>
-                  <Link to={`/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">{c.commenter}</Link>:
+                  <Link to={currentUser === c.commenter ? '/profile' : `/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">
+                    {c.commenter}
+                  </Link>:
                 </strong>
                  {c.text} <span className="text-sm text-gray-400">({c.votes} votes)</span>
                 {!post.completed && token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (

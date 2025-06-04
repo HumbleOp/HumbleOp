@@ -2,19 +2,31 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../context/AuthContext';
 import PageContainer from '../components/PageContainer';
 
 export default function PostList() {
   const { request, loading, error } = useApi();
   const [posts, setPosts] = useState([]);
+  const { token } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null);
+
 
   useEffect(() => {
     async function fetchPosts() {
       const data = await request('/search?q=&type=post&limit=20&sort=desc');
       setPosts(data.posts || []);
+
+      if (token) {
+        const res = await fetch('http://localhost:5000/profile', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        const user = await res.json();
+        setCurrentUser(user.username);
+      }
     }
     fetchPosts();
-  }, [request]);
+  }, [request, token]);
 
   if (loading) return <p className="text-center text-white py-8">Loading posts...</p>;
   if (error) return <p className="text-red-400 text-center py-8">{error}</p>;
@@ -40,12 +52,20 @@ export default function PostList() {
                   {post.body.length > 100 ? post.body.slice(0, 100) + '...' : post.body}
                 </Link>
                 <p className="text-sm text-gray-400 mt-1">
-                  by <Link to={`/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
-                </p>
+                    by <Link to={currentUser === post.author ? '/profile' : `/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+                  </p>
                 <p className="text-sm mt-1">
                   <span className="text-[#5D749B]">🕒 {post.voting_ends_in} sec</span> &nbsp;|&nbsp;
-                  <span className="text-yellow-400">🏆 Winner:</span> {<Link to={`/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link> || '—'} &nbsp;|&nbsp;
-                  <span className="text-gray-400">🥈 Second:</span> {<Link to={`/profile/${post.SECOND}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link> || '—'}
+                  <span className="text-yellow-400">🏆 Winner:</span> {
+                      post.winner ? (
+                        <Link to={currentUser === post.winner ? '/profile' : `/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link>
+                      ) : '—'
+                    }
+                  <span className="text-gray-400">🥈 Second:</span> {
+                      post.second ? (
+                        <Link to={currentUser === post.second ? '/profile' : `/profile/${post.second}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link>
+                      ) : '—'
+                    }
                 </p>
               </li>
             ))}

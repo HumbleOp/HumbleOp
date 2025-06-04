@@ -1,6 +1,7 @@
 // src/pages/SearchResults.jsx
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import PageContainer from "../components/PageContainer";
 
 export default function SearchResults() {
@@ -9,11 +10,21 @@ export default function SearchResults() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
+  const { token } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null);
+
 
   const q = searchParams.get("q") || "";
 
   useEffect(() => {
     async function fetchResults() {
+            if (token) {
+        fetch("http://localhost:5000/profile", {
+          headers: { Authorization: "Bearer " + token }
+        })
+          .then(res => res.json())
+          .then(data => setCurrentUser(data.username));
+      }
       setLoading(true);
       try {
         const res = await fetch(`http://localhost:5000/search?q=${encodeURIComponent(q)}&type=all&limit=20&sort=desc`);
@@ -64,7 +75,12 @@ export default function SearchResults() {
               <ul className="list-disc list-inside">
                 {results.users.map((u) => (
                   <li key={u}>
-                    <Link to={`/profile/${u}`} className="text-[#A1D9B4] hover:underline">{highlight(u)}</Link>
+                    <Link
+                      to={currentUser === u ? '/profile' : `/profile/${u}`}
+                      className="text-[#A1D9B4] hover:underline"
+                    >
+                      {highlight(u)}
+                    </Link>
                   </li>
                 ))}
               </ul>
