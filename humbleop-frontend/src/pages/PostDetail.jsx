@@ -16,6 +16,8 @@ export default function PostDetail() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [votedFor, setVotedFor] = useState(null);
+  const [alreadyCommented, setAlreadyCommented] = useState(false);
+
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -24,6 +26,26 @@ export default function PostDetail() {
 
       setPost(postData);
       setComments(commentData.comments || []);
+      if (token && postData.author) {
+        const res = await fetch('http://localhost:5000/profile', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const userData = await res.json();
+        setCurrentUser(userData.username);
+
+        const votedComment = commentData.comments.find(c =>
+          c.voters?.includes(userData.username)
+        );
+        if (votedComment) {
+          setVotedFor(votedComment.commenter);
+        }
+
+        const hasCommented = commentData.comments.some(c =>
+          c.commenter === userData.username
+        );
+        setAlreadyCommented(hasCommented);
+      }
+
 
       if (token && postData.author) {
         const res = await fetch('http://localhost:5000/profile', {
@@ -134,7 +156,7 @@ export default function PostDetail() {
             {comments.map((c, i) => (
               <li key={i} className="border border-[#5D749B] p-3 rounded">
                 <strong>{c.commenter}:</strong> {c.text} <span className="text-sm text-gray-400">({c.votes} votes)</span>
-                {token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
+                {!post.completed && token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
                   votedFor === null ? (
                     <button
                       onClick={() => handleVote(c.commenter)}
@@ -158,26 +180,28 @@ export default function PostDetail() {
             ))}
           </ul>
         )}
-
-        {token && currentUser && currentUser !== post.author && !post.started && (
-          <form onSubmit={handleCommentSubmit} className="mt-6">
-            <h4 className="mb-2 text-[#5D749B] font-semibold">Leave a comment</h4>
-            <textarea
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              rows={4}
-              className="w-full p-2 border rounded text-black"
-              placeholder="Write your comment..."
-            />
-            <button
-              type="submit"
-              className="mt-2 bg-[#7FAF92] text-black px-4 py-2 rounded hover:bg-[#5D749B]"
-            >
-              Submit
-            </button>
-          </form>
+        {token && currentUser && currentUser !== post.author && !post.started && !post.completed && (
+          alreadyCommented ? (
+            <p className="mt-6 italic text-yellow-400 text-center">💬 You already commented on this post.</p>
+          ) : (
+            <form onSubmit={handleCommentSubmit} className="mt-6">
+              <h4 className="mb-2 text-[#5D749B] font-semibold">Leave a comment</h4>
+              <textarea
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                rows={4}
+                className="w-full p-2 border rounded text-black"
+                placeholder="Write your comment..."
+              />
+              <button
+                type="submit"
+                className="mt-2 bg-[#7FAF92] text-black px-4 py-2 rounded hover:bg-[#5D749B]"
+              >
+                Submit
+              </button>
+            </form>
+          )
         )}
-
         {token && !post.completed && currentUser && currentUser !== post.author && post.started && (
           <p className="mt-6 italic text-yellow-400">🥊 Duel in progress. You can no longer comment.</p>
         )}
@@ -187,7 +211,7 @@ export default function PostDetail() {
         )}
       </div>
        {post.completed && (
-          <p className="text-yellow-400 mt-6 italic">⚔️ This duel has ended. No more comments, likes or flags allowed.</p>
+          <p className="text-yellow-400 mt-6 italic text-center">⚔️ This duel has ended. No more comments, likes or flags allowed.</p>
         )}
     </PageContainer>
   );

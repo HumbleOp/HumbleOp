@@ -239,19 +239,20 @@ def add_comment(post_id):
       404:
         description: Post not found
     """
-    if post.completed:
-      return error("Post is completed. No more comments allowed.", 403)
-
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
+
+    if post.completed:
+        return error("Post is completed. No more comments allowed.", 403)
+
     commenter = g.current_user.username
     text = request.json.get("text")
 
     if post.started:
-      return jsonify({"error": "The post has started a duel. You can no longer comment."}), 403
+        return jsonify({"error": "The post has started a duel. You can no longer comment."}), 403
 
-    if not post.started and commenter == post.author:
+    if commenter == post.author:
         return error("Authors cannot comment on their own post.", 403)
 
     if not text:
@@ -264,7 +265,6 @@ def add_comment(post_id):
     comment = Comment(post_id=post_id, commenter=commenter, text=text, is_duel=False)
     db.session.add(comment)
     db.session.commit()
-    # badge awarding etc...
     return success({"status": "Comment added."}, 200)
 
 
