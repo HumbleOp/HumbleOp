@@ -46,21 +46,6 @@ export default function PostDetail() {
         setAlreadyCommented(hasCommented);
       }
 
-
-      if (token && postData.author) {
-        const res = await fetch('http://localhost:5000/profile', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        const userData = await res.json();
-        setCurrentUser(userData.username);
-
-        const votedComment = commentData.comments.find(c =>
-          c.voters?.includes(userData.username)
-        );
-        if (votedComment) {
-          setVotedFor(votedComment.commenter);
-        }
-      }
     } catch {
         // error handled by useApi
     }
@@ -119,7 +104,9 @@ export default function PostDetail() {
   return (
     <PageContainer>
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">Post by {post.author}</h2>
+        <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">
+          Post by <Link to={`/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+        </h2>
         <p className="mb-4">{post.body}</p>
 
         {post.media?.length > 0 && (
@@ -136,8 +123,8 @@ export default function PostDetail() {
         )}
 
         <div className="mb-6 space-y-1">
-          <p><strong className="text-[#5D749B]">Winner:</strong> {post.winner || '—'}</p>
-          <p><strong className="text-[#5D749B]">Second:</strong> {post.second || '—'}</p>
+          <p><strong className="text-[#5D749B]">Winner:</strong> {<Link to={`/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link> || '—'}</p>
+          <p><strong className="text-[#5D749B]">Second:</strong> {<Link to={`/profile/${post.SECOND}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link> || '—'}</p>
           <p><strong className="text-[#5D749B]">Votes end in:</strong> {post.voting_ends_in} seconds</p>
           {post.winner && post.second && post.started && (
             <p className="text-sm text-yellow-400">
@@ -155,7 +142,10 @@ export default function PostDetail() {
           <ul className="space-y-3">
             {comments.map((c, i) => (
               <li key={i} className="border border-[#5D749B] p-3 rounded">
-                <strong>{c.commenter}:</strong> {c.text} <span className="text-sm text-gray-400">({c.votes} votes)</span>
+                <strong>
+                  <Link to={`/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">{c.commenter}</Link>:
+                </strong>
+                 {c.text} <span className="text-sm text-gray-400">({c.votes} votes)</span>
                 {!post.completed && token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
                   votedFor === null ? (
                     <button

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useApi } from '../hooks/useApi';
 import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 import PageContainer from "../components/PageContainer";
 
 export default function DuelPage() {
@@ -132,7 +133,7 @@ export default function DuelPage() {
 
         <div className="bg-[#1A2A20] shadow rounded-xl p-4 mb-4">
           <p className="text-sm text-gray-400">
-            Posted by <strong className="text-[#E8E5DC]">{post.author}</strong>
+            Posted by <Link to={`/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
           </p>
           <p className="mt-2 text-lg text-[#E8E5DC]">{post.body}</p>
         </div>
@@ -141,7 +142,9 @@ export default function DuelPage() {
           <p className="text-sm text-[#7FAF92] font-semibold mb-1">Duel Participants:</p>
           <ul className="list-disc list-inside text-sm">
             {duelers.map((user, i) => (
-              <li key={i}>{user}</li>
+              <li key={i}>
+              <Link to={`/profile/${user}`} className="text-[#A1D9B4] hover:underline">{user}</Link>
+            </li>
             ))}
           </ul>
         </div>
@@ -154,7 +157,9 @@ export default function DuelPage() {
             <ul className="space-y-2">
               {comments.map((c, i) => (
                 <li key={i} className="bg-[#142017] p-3 rounded shadow">
-                  <strong>{c.commenter}</strong>: {c.text}
+                  <strong>
+                    <Link to={`/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">{c.commenter}</Link>
+                  </strong>: {c.text}
                 </li>
               ))}
             </ul>

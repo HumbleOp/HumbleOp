@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
+import PublicProfilePage from "./pages/PublicProfilePage";
 import CreatePost from "./pages/CreatePost";
 import PostList from "./pages/PostList";
 import PostDetail from "./pages/PostDetail";
@@ -42,6 +43,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/search" element={<Protected><SearchResults /></Protected>} />
           <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
+          <Route path="/profile/:username" element={<Protected><PublicProfilePage /></Protected>} />
           <Route path="/create" element={<Protected><CreatePost /></Protected>} />
           <Route path="/posts" element={<Protected><PostList /></Protected>} />
           <Route path="/post/:id" element={<Protected><PostDetail /></Protected>} />

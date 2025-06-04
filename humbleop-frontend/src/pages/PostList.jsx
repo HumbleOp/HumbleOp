@@ -39,9 +39,13 @@ export default function PostList() {
                 >
                   {post.body.length > 100 ? post.body.slice(0, 100) + '...' : post.body}
                 </Link>
-                <p className="text-sm text-gray-400 mt-1">by {post.author}</p>
-                <p className="text-sm text-[#5D749B] mt-1">
-                  Votes end in: {post.voting_ends_in} sec — Winner: {post.winner || '—'}
+                <p className="text-sm text-gray-400 mt-1">
+                  by <Link to={`/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+                </p>
+                <p className="text-sm mt-1">
+                  <span className="text-[#5D749B]">🕒 {post.voting_ends_in} sec</span> &nbsp;|&nbsp;
+                  <span className="text-yellow-400">🏆 Winner:</span> {<Link to={`/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link> || '—'} &nbsp;|&nbsp;
+                  <span className="text-gray-400">🥈 Second:</span> {<Link to={`/profile/${post.SECOND}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link> || '—'}
                 </p>
               </li>
             ))}

@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from datetime import datetime
 from models import User, Post
 
 search_bp = Blueprint("search", __name__)
@@ -78,8 +79,16 @@ def search():
 
         posts = query.limit(limit).all()
 
-        results["posts"] = [
-            {"id": p.id, "author": p.author, "body": p.body, "media": p.media_urls}
+    results["posts"] = [
+        {
+            "id": p.id,
+            "author": p.author,
+            "body": p.body,
+            "media": p.media_urls,
+            "winner": p.winner,
+            "second": p.second,
+            "voting_ends_in": max(int((p.voting_deadline - datetime.now()).total_seconds()), 0) if p.voting_deadline else None
+        }
             for p in posts
         ]
 

@@ -48,6 +48,42 @@ def get_profile():
         "followers": [u.username for u in user.followers]
     }), 200
 
+@profile_bp.route("/user/<username>", methods=["GET"])
+@login_required
+def get_user_profile(username):
+    """
+    Get public profile of any user (authentication required)
+    ---
+    tags:
+      - Profile
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: username
+        in: path
+        required: true
+        type: string
+        description: Username of the user
+    responses:
+      200:
+        description: Public profile data
+      401:
+        description: Authentication required
+      404:
+        description: User not found
+    """
+    user = db.session.get(User, username)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({
+        "username": user.username,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio,
+        "badges": [b.name for b in user.badges],
+        "followers": [u.username for u in user.followers],
+        "following": [u.username for u in user.following]
+    }), 200
+
 @profile_bp.route("/profile", methods=["PUT"])
 @login_required
 def update_profile():
