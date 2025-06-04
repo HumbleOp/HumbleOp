@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g
+from flask import Blueprint, request, g, jsonify
 from collections import Counter
 from core.responses import error, success
 from core.extensions import db, scheduler
@@ -239,11 +239,17 @@ def add_comment(post_id):
       404:
         description: Post not found
     """
+    if post.completed:
+      return error("Post is completed. No more comments allowed.", 403)
+
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
     commenter = g.current_user.username
     text = request.json.get("text")
+
+    if post.started:
+      return jsonify({"error": "The post has started a duel. You can no longer comment."}), 403
 
     if not post.started and commenter == post.author:
         return error("Authors cannot comment on their own post.", 403)
@@ -480,7 +486,11 @@ def get_status(post_id):
         "flag_users": flag_users,
         "ranking": dict(ranking),
         "comments": comment_list,
-        "flag_analysis": flag_analysis
+        "flag_analysis": flag_analysis,
+        "duel_completed_by_author": post.duel_completed_by_author,
+        "duel_completed_by_winner": post.duel_completed_by_winner,
+        "completed": post.completed
+
 
     }, 200)
 
@@ -539,7 +549,7 @@ def get_comments(post_id):
     """
     if not db.session.get(Post, post_id):
         return error("Post not found.", 404)
-    comments = Comment.query.filter_by(post_id=post_id).all()
+    comments = Comment.query.filter_by(post_id=post_id, is_duel=False).all()
     data = [{
         "commenter": c.commenter,
         "text": c.text,
@@ -572,6 +582,9 @@ def like(post_id):
       404:
         description: Post not found
     """
+    if post.completed:
+      return error("Post is completed. No more voting allowed.", 403)
+
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -612,6 +625,9 @@ def flag(post_id):
       404:
         description: Post not found
     """
+    if post.completed:
+      return error("Post is completed. No more voting allowed.", 403)
+
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -674,6 +690,8 @@ def start_now(post_id):
 @posts_bp.route("/duel_comment/<post_id>", methods=["POST"])
 @login_required
 def add_duel_comment(post_id):
+    if post.completed:
+      return error("Post is completed. Duel is over.", 403)
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
@@ -709,3 +727,57 @@ def get_duel_comments(post_id):
     } for c in comments], 200)
 
 
+@posts_bp.route("/complete_duel/<post_id>", methods=["POST"])
+@login_required
+def complete_duel(post_id):
+    post = db.session.get(Post, post_id)
+    if not post:
+        return error("Post not found.", 404)
+    if not post.started:
+        return error("Duel hasn't started yet.", 400)
+    if post.completed:
+        return success({"status": "Duel already marked as completed."}, 200)
+
+    user = g.current_user.username
+
+    if user == post.author:
+        post.duel_completed_by_author = True
+    elif user == post.winner:
+        post.duel_completed_by_winner = True
+    else:
+        return error("Only the author or winner can mark the duel as completed.", 403)
+
+    # Se entrambi hanno confermato
+    if post.duel_completed_by_author and post.duel_completed_by_winner:
+        post.completed = True
+
+    db.session.commit()
+    return success({
+        "status": "Completion recorded.",
+        "completed": post.completed,
+        "by_author": post.duel_completed_by_author,
+        "by_winner": post.duel_completed_by_winner
+    }, 200)
+
+@posts_bp.route("/posts", methods=["GET"])
+def list_posts():
+    """
+    List posts, optionally filtered by type (e.g. completed)
+    """
+    post_type = request.args.get("type")
+
+    if post_type == "completed":
+        posts = Post.query.filter_by(completed=True).order_by(Post.created_at.desc()).all()
+    else:
+        posts = Post.query.order_by(Post.created_at.desc()).all()
+
+    data = [{
+        "id": p.id,
+        "author": p.author,
+        "body": p.body,
+        "winner": p.winner,
+        "second": p.second,
+        "completed": p.completed
+    } for p in posts]
+
+    return success({"posts": data}, 200)

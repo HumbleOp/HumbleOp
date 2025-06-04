@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { toast } from 'react-hot-toast';
+import PageContainer from '../components/PageContainer';
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -94,7 +95,7 @@ export default function PostDetail() {
   if (error) return <p className="text-red-400 text-center py-8">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC]">
+    <PageContainer>
       <div className="max-w-4xl mx-auto px-4 py-6">
         <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">Post by {post.author}</h2>
         <p className="mb-4">{post.body}</p>
@@ -158,7 +159,7 @@ export default function PostDetail() {
           </ul>
         )}
 
-        {token && currentUser && currentUser !== post.author && (
+        {token && currentUser && currentUser !== post.author && !post.started && (
           <form onSubmit={handleCommentSubmit} className="mt-6">
             <h4 className="mb-2 text-[#5D749B] font-semibold">Leave a comment</h4>
             <textarea
@@ -177,10 +178,17 @@ export default function PostDetail() {
           </form>
         )}
 
-        {token && currentUser === post.author && (
+        {token && !post.completed && currentUser && currentUser !== post.author && post.started && (
+          <p className="mt-6 italic text-yellow-400">🥊 Duel in progress. You can no longer comment.</p>
+        )}
+
+        {token && !post.completed && currentUser === post.author && (
           <p className="mt-6 text-gray-400 italic">You cannot comment on your own post.</p>
         )}
       </div>
-    </div>
+       {post.completed && (
+          <p className="text-yellow-400 mt-6 italic">⚔️ This duel has ended. No more comments, likes or flags allowed.</p>
+        )}
+    </PageContainer>
   );
 }

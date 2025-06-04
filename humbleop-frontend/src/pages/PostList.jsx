@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import PageContainer from '../components/PageContainer';
 
 export default function PostList() {
   const { request, loading, error } = useApi();
@@ -19,7 +20,7 @@ export default function PostList() {
   if (error) return <p className="text-red-400 text-center py-8">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] px-4 py-6">
+    <PageContainer>
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-[#7FAF92] mb-4">All Posts</h1>
 
@@ -47,6 +48,6 @@ export default function PostList() {
           </ul>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

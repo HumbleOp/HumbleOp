@@ -1,6 +1,7 @@
 // src/pages/SearchResults.jsx
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import PageContainer from "../components/PageContainer";
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -44,7 +45,7 @@ export default function SearchResults() {
   if (error) return <p className="p-4 text-red-600 bg-[#101B13] min-h-screen">Error: {error}</p>;
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] flex flex-col items-center p-4">
+    <PageContainer>
       <div className="w-full max-w-3xl bg-[#1A2A20] p-6 rounded shadow">
         <h1 className="text-2xl font-bold mb-6 text-[#7FAF92]">Search Results for &quot;{q}&quot;</h1>
 
@@ -91,6 +92,6 @@ export default function SearchResults() {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

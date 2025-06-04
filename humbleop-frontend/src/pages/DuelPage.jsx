@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useApi } from '../hooks/useApi';
 import { toast } from "react-hot-toast";
+import PageContainer from "../components/PageContainer";
 
 export default function DuelPage() {
   const { id } = useParams();
@@ -53,30 +54,32 @@ export default function DuelPage() {
     }
   }
 
+  async function handleCompleteDuel() {
+  try {
+    await request(`/complete_duel/${post.id}`, 'POST');
+    toast.success("You proposed to end the duel.");
+    fetchData();
+  } catch (err) {
+    toast.error(err.message || "Failed to send completion request.");
+  }
+}
+
+
   if (loading && !post) return <p className="text-center text-white py-8">Loading duel...</p>;
-  
   if (!post || !post.winner || !post.author) return <p className="text-center text-white py-8">Waiting for duel to initialize...</p>;
 
   const duelers = [post.author, post.winner];
   const duelComments = comments.filter(c => duelers.includes(c.commenter));
-const lastCommenter = duelComments.length > 0 ? duelComments[duelComments.length - 1].commenter : null;
-const currentTurnUser = lastCommenter === duelers[0] ? duelers[1] : duelers[0];
+  const lastCommenter = duelComments.length > 0 ? duelComments[duelComments.length - 1].commenter : null;
+  const currentTurnUser = lastCommenter === duelers[0] ? duelers[1] : duelers[0];
 
   const normalizedUser = currentUser?.trim().toLowerCase();
-const normalizedDuelers = duelers.map(d => d?.trim().toLowerCase());
-const canComment = normalizedDuelers.includes(normalizedUser) && normalizedUser === currentTurnUser?.trim().toLowerCase();
-
-console.log("currentUser =", currentUser);
-console.log("duelers =", duelers);
-console.log("normalizedUser =", normalizedUser);
-console.log("normalizedDuelers =", normalizedDuelers);
-console.log("lastCommenter =", lastCommenter);
-console.log("currentTurnUser =", currentTurnUser);
-console.log("canComment =", canComment);
+  const normalizedDuelers = duelers.map(d => d?.trim().toLowerCase());
+  const canComment = normalizedDuelers.includes(normalizedUser) && normalizedUser === currentTurnUser?.trim().toLowerCase();
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] px-4 py-6">
-      {post && post.winner && currentUser && currentUser !== post.author && currentUser !== post.winner && (
+    <PageContainer>
+      {post && !post.completed && post.winner && currentUser && currentUser !== post.author && currentUser !== post.winner && (
         <div className="mb-4 flex gap-4">
           {!post.like_users?.includes(currentUser) && (
             <button
@@ -120,7 +123,8 @@ console.log("canComment =", canComment);
             <span className="text-red-400">You already flagged {post.winner}</span>
           )}
         </div>
-      )}&quot;min-h-screen bg-[#101B13] text-[#E8E5DC] px-4 py-6&quot;&gt;
+      )}
+
       <div className="max-w-3xl mx-auto">
         <h1 className="text-xl font-bold mb-2 text-[#7FAF92]">Duel in Progress</h1>
 
@@ -157,7 +161,7 @@ console.log("canComment =", canComment);
           )}
         </div>
 
-        {canComment && (
+        {canComment && !post.completed && (
           <form onSubmit={handleSubmit} className="mt-6">
             <textarea
               value={text}
@@ -176,7 +180,7 @@ console.log("canComment =", canComment);
           </form>
         )}
 
-        {!canComment && duelers.includes(currentUser) && (
+        {!canComment && !post.completed && duelers.includes(currentUser) && (
           <p className="text-gray-400 italic mt-4">
             Waiting for your turn to comment.
           </p>
@@ -188,6 +192,25 @@ console.log("canComment =", canComment);
           </p>
         )}
 
+        {duelers.includes(currentUser) && !post.completed && (
+          <div className="mt-6">
+            {(
+              (currentUser === post.author && !post.duel_completed_by_author) ||
+              (currentUser === post.winner && !post.duel_completed_by_winner)
+            ) ? (
+              <button
+                onClick={handleCompleteDuel}
+                className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                ✋ Let’s shake hands and close this
+              </button>
+            ) : (
+              <p className="mt-2 text-sm italic text-yellow-300">
+                Waiting for the other duelist to shake hands...
+              </p>
+            )}
+          </div>
+        )}
         {post.flag_analysis && (
           <div className="mt-8 bg-[#1A2A20] p-4 rounded-xl shadow space-y-2 border border-[#5D749B]">
             <h3 className="font-semibold text-[#7FAF92]">Flag Analysis</h3>
@@ -212,7 +235,10 @@ console.log("canComment =", canComment);
             </div>
           </div>
         )}
+        {post.completed && (
+          <p className="text-yellow-400 mt-6 italic">⚔️ This duel has ended. No more comments, likes or flags allowed.</p>
+        )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

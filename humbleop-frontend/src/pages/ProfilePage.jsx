@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
+import PageContainer from '../components/PageContainer';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -91,7 +92,7 @@ export default function ProfilePage() {
   if (!profile) return <p className="text-center py-8">Loading profile...</p>;
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC]">
+    <PageContainer>
       <div className="max-w-4xl mx-auto p-6">
         <h2 className="text-2xl font-bold mb-6 text-[#7FAF92]">Welcome, {profile.username}!</h2>
 
@@ -179,6 +180,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

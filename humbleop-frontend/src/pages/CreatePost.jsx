@@ -1,96 +1,65 @@
-// src/pages/SearchResults.jsx
-import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+// src/pages/CreatePost.jsx
+import { useState } from "react";
+import { useApi } from "../hooks/useApi";
+import { toast } from "react-hot-toast";
+import PageContainer from "../components/PageContainer";
 
-export default function SearchResults() {
-  const [searchParams] = useSearchParams();
-  const [results, setResults] = useState({ users: [], posts: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("all");
+export default function CreatePost() {
+  const { request } = useApi();
+  const [body, setBody] = useState("");
+  const [hours, setHours] = useState(12);
 
-  const q = searchParams.get("q") || "";
-
-  useEffect(() => {
-    async function fetchResults() {
-      setLoading(true);
-      try {
-        const res = await fetch(`http://localhost:5000/search?q=${encodeURIComponent(q)}&type=all&limit=20&sort=desc`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Search failed");
-        setResults(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const id = Math.random().toString(36).slice(2);
+    try {
+      await request(`/create_post/${id}`, "POST", {
+        body,
+        voting_hours: hours,
+      });
+      toast.success("Post created");
+      setBody("");
+      setHours(12);
+    } catch (err) {
+      toast.error(err.message || "Failed to create post");
     }
-
-    if (q.trim()) {
-      fetchResults();
-    }
-  }, [q]);
-
-  function highlight(text) {
-    if (!q.trim()) return text;
-    const regex = new RegExp(`(${q})`, "gi");
-    return text.split(regex).map((part, i) =>
-      regex.test(part) ? <mark key={i} className="bg-yellow-400 text-black">{part}</mark> : part
-    );
   }
 
-  if (!q.trim()) return <p className="p-4 text-[#E8E5DC] bg-[#101B13] min-h-screen">Please enter a search query.</p>;
-  if (loading) return <p className="p-4 text-[#E8E5DC] bg-[#101B13] min-h-screen">Searching for &quot;{q}&quot;...</p>;
-  if (error) return <p className="p-4 text-red-600 bg-[#101B13] min-h-screen">Error: {error}</p>;
-
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] flex flex-col items-center p-4">
-      <div className="w-full max-w-3xl bg-[#1A2A20] p-6 rounded shadow">
-        <h1 className="text-2xl font-bold mb-6 text-[#7FAF92]">Search Results for &quot;{q}&quot;</h1>
-
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setFilter("all")} className={`px-3 py-1 rounded ${filter === "all" ? "bg-[#7FAF92] text-black" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>All</button>
-          <button onClick={() => setFilter("users")} className={`px-3 py-1 rounded ${filter === "users" ? "bg-[#7FAF92] text-black" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>Users</button>
-          <button onClick={() => setFilter("posts")} className={`px-3 py-1 rounded ${filter === "posts" ? "bg-[#7FAF92] text-black" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>Posts</button>
-        </div>
-
-        {(filter === "all" || filter === "users") && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-[#7FAF92] mb-2">Users</h2>
-            {results.users.length === 0 ? (
-              <p className="text-sm text-gray-400">No users found.</p>
-            ) : (
-              <ul className="list-disc list-inside">
-                {results.users.map((u) => (
-                  <li key={u}>
-                    <Link to={`/profile/${u}`} className="text-[#A1D9B4] hover:underline">{highlight(u)}</Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {(filter === "all" || filter === "posts") && (
+    <PageContainer>
+      <div className="max-w-2xl mx-auto bg-[#1A2A20] p-6 rounded shadow">
+        <h1 className="text-2xl font-bold text-[#7FAF92] mb-4">Create a New Post</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-[#7FAF92] mb-2">Posts</h2>
-            {results.posts.length === 0 ? (
-              <p className="text-sm text-gray-400">No posts found.</p>
-            ) : (
-              <ul className="space-y-4">
-                {results.posts.map((post) => (
-                  <li key={post.id} className="border-b border-[#3A4B3C] pb-2">
-                    <Link to={`/post/${post.id}`} className="text-[#A1D9B4] hover:underline">
-                      {highlight(post.body.length > 100 ? post.body.slice(0, 100) + "..." : post.body)}
-                    </Link>
-                    <p className="text-sm text-gray-400">by {post.author}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <label className="block mb-1 text-sm">Post Content</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={4}
+              className="w-full p-2 rounded border text-black"
+              placeholder="Share your debate topic or opinion..."
+              required
+            />
           </div>
-        )}
+          <div>
+            <label className="block mb-1 text-sm">Voting duration (hours)</label>
+            <input
+              type="number"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className="w-full p-2 rounded border text-black"
+              min="1"
+              max="72"
+            />
+          </div>
+          <button
+            type="submit"
+            className="bg-[#7FAF92] text-black px-4 py-2 rounded hover:bg-[#5D749B]"
+          >
+            Submit
+          </button>
+        </form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

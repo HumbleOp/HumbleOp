@@ -49,6 +49,9 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     voting_deadline = db.Column(db.DateTime, nullable=True)
     duel_start_time = db.Column(db.DateTime, nullable=True)
+    duel_completed_by_author = db.Column(db.Boolean, default=False)
+    duel_completed_by_winner = db.Column(db.Boolean, default=False)
+    completed = db.Column(db.Boolean, default=False)
 
     comments = db.relationship('Comment', backref='posts', lazy=True)
     votes    = db.relationship('Vote',    backref='posts', lazy=True)
