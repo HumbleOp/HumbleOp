@@ -154,6 +154,47 @@ export default function ProfilePage() {
                 </button>
               </p>
             )}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+            <div>
+              <h3 className="text-[#7FAF92] font-semibold mb-2">Followers</h3>
+              {profile.followers?.length > 0 ? (
+                <ul className="space-y-1">
+                  {profile.followers.map((u) => (
+                    <li key={u}>
+                      <Link
+                        to={u === profile.username ? "/profile" : `/profile/${u}`}
+                        className="text-[#A1D9B4] hover:underline"
+                      >
+                        {u}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="italic text-gray-500">No followers yet.</p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-[#7FAF92] font-semibold mb-2">Following</h3>
+              {profile.following?.length > 0 ? (
+                <ul className="space-y-1">
+                  {profile.following.map((u) => (
+                    <li key={u}>
+                      <Link
+                        to={u === profile.username ? "/profile" : `/profile/${u}`}
+                        className="text-[#A1D9B4] hover:underline"
+                      >
+                        {u}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="italic text-gray-500">Not following anyone.</p>
+              )}
+            </div>
+          </div>
 
             <div className="mt-6">
               <strong className="block text-[#5D749B] mb-2">Badges:</strong>

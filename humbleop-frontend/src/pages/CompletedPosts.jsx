@@ -2,11 +2,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../context/AuthContext';
 import PageContainer from '../components/PageContainer';
 
 export default function CompletedPosts() {
   const { request, loading, error } = useApi();
   const [posts, setPosts] = useState([]);
+
+  const { token } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     async function fetchCompleted() {
@@ -14,6 +18,14 @@ export default function CompletedPosts() {
       setPosts(data.posts || []);
     }
     fetchCompleted();
+    if (token) {
+      fetch("http://localhost:5000/profile", {
+        headers: { Authorization: "Bearer " + token }
+    })
+      .then((res) => res.json())
+      .then((data) => setCurrentUser(data.username));
+    }
+
   }, [request]);
 
   if (loading) return <p className="text-center text-white py-8">Loading completed posts...</p>;
@@ -39,9 +51,23 @@ export default function CompletedPosts() {
                 >
                   {post.body.length > 100 ? post.body.slice(0, 100) + '...' : post.body}
                 </Link>
-                <p className="text-sm text-gray-400 mt-1">by {post.author}</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  by <Link to={currentUser === post.author ? '/profile' : `/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
+                </p>
                 <p className="text-sm text-[#5D749B] mt-1">
-                  Winner: {post.winner || '—'} — Second: {post.second || '—'}
+                  Winner:{' '}
+                  {post.winner ? (
+                    <Link to={currentUser === post.winner ? '/profile' : `/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">
+                      {post.winner}
+                    </Link>
+                  ) : '—'}
+                  {' — '}
+                  Second:{' '}
+                  {post.second ? (
+                    <Link to={currentUser === post.second ? '/profile' : `/profile/${post.second}`} className="text-[#A1D9B4] hover:underline">
+                      {post.second}
+                    </Link>
+                  ) : '—'}
                 </p>
               </li>
             ))}
