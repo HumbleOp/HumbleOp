@@ -1,13 +1,14 @@
-// src/pages/RegisterPage.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+
 import logo from '../assets/logo.png';
+import registerBg from '../assets/login-bg.png'; // Puoi sostituirlo con un'immagine dedicata
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
   async function handleRegister(e) {
@@ -16,77 +17,92 @@ export default function RegisterPage() {
       const res = await fetch('http://localhost:5000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ username, email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || 'Registration failed');
-      } else {
-        toast.success('Registration successful! Redirecting...');
-        setTimeout(() => navigate('/'), 1500);
+        return;
       }
+      toast.success('Registration successful! Redirecting to login...');
+      setTimeout(() => navigate('/'), 1500);
     } catch (err) {
-      toast.error(err.message || 'Registration error');
+      toast.error(err.message || 'An error occurred');
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#101B13] text-[#E8E5DC] flex flex-col items-center justify-center p-4">
-      {/* Logo centrato */}
-      <img
-        src={logo}
-        alt="HumbleOp Logo"
-        className="w-80 h-80 mb-10"
-      />
-
-      <form
-        onSubmit={handleRegister}
-        className="bg-[#1A2A20] p-8 rounded shadow w-full max-w-md"
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+      {/* Left: Registration Form with gradient */}
+      <div
+        className="flex flex-col justify-center items-start md:items-center px-8 py-12 space-y-8"
+        style={{
+          background: 'linear-gradient(to right, #101B13 0%, #172d1a 25%, #112216 80%, #112216 100%)',
+          color: 'white',
+        }}
       >
-        <h1 className="text-2xl font-bold mb-6 text-[#7FAF92]">Create your account</h1>
+        <img src={logo} alt="HumbleOp Logo" className="h-84 md:h-72" />
 
-        <label className="block mb-2">Username:</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full p-2 mb-4 rounded border text-black"
-          required
-        />
+        <div className="space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-[#E8E5DC] tracking-wide">
+            Join HumbleOp
+          </h1>
+          <p className="text-sm text-gray-400 max-w-sm">
+            Dive into engaging debates, earn badges, and show your support or raise flags. Become a part of our community today!
+          </p>
+        </div>
 
-        <label className="block mb-2">Email:</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-2 mb-4 rounded border text-black"
-          required
-        />
+        <form onSubmit={handleRegister} className="w-full max-w-sm space-y-5">
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
+            required
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
+            required
+          />
+          <button
+            type="submit"
+            className="w-full bg-[#7FAF92] text-black py-3 rounded font-semibold tracking-wide hover:bg-[#5D749B] hover:text-white transition"
+          >
+            REGISTER
+          </button>
+          <p className="text-sm text-gray-400 text-center">
+            Already have an account?{' '}
+            <Link to="/" className="text-[#7FAF92] underline">
+              Log in here
+            </Link>
+          </p>
+        </form>
+      </div>
 
-        <label className="block mb-2">Password:</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 mb-6 rounded border text-black"
-          required
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-[#7FAF92] text-black py-2 px-4 rounded hover:bg-[#5D749B]"
-        >
-          Register
-        </button>
-      </form>
-
-      {/* Link login sotto il form */}
-      <p className="mt-4 text-sm text-[#E8E5DC]">
-        Already have an account?{' '}
-        <Link to="/" className="text-[#7FAF92] underline hover:text-[#A1D9B4]">
-          Log in
-        </Link>
-      </p>
+      {/* Right: Visual Section */}
+      <div
+        className="hidden md:flex flex-col justify-center items-center p-8"
+        style={{
+          backgroundImage: `url(${registerBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Sfondo illustrato */}
+      </div>
     </div>
   );
 }

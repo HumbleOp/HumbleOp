@@ -38,7 +38,7 @@ export default function LoginPage() {
           color: 'white',
         }}
       >
-        <img src={logo} alt="HumbleOp Logo" className="h-80 md:h-72" />
+        <img src={logo} alt="HumbleOp Logo" className="h-84 md:h-72" />
         <h1 className="text-3xl md:text-4xl font-bold text-[#E8E5DC] tracking-wide">Log in</h1>
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-5">
           <input
