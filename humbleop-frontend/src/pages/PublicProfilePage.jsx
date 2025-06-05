@@ -85,8 +85,12 @@ export default function PublicProfilePage() {
           </div>
 
           <div className="col-span-2">
-            <strong className="block mb-2 text-[#5D749B]">Bio:</strong>
-            <p className="mb-4">{profile.bio || 'No bio provided.'}</p>
+          <strong className="block mb-2 text-[#5D749B]">Bio:</strong>
+          <p className="mb-4 text-[#E8E5DC]">
+            {profile.bio ||
+              "No bio provided."
+            }
+          </p>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
               <div>
@@ -131,17 +135,17 @@ export default function PublicProfilePage() {
             </div>
 
             <div className="mt-6">
-              <strong className="block text-[#5D749B] mb-2">Badges:</strong>
-              <div className="flex flex-wrap gap-2">
-                {(profile.badges || []).map((badge, i) => (
-                  <span
-                    key={i}
-                    className="text-xs bg-[#E8E5DC] text-[#101B13] px-2 py-1 rounded shadow"
-                  >
-                    {badge}
-                  </span>
-                ))}
-              </div>
+            <strong className="block text-[#5D749B] mb-2">Badges:</strong>
+            <div className="flex flex-wrap gap-2">
+              {(profile.badges || []).map((badge, i) => (
+                <img
+                  key={i}
+                  src={require(`../assets/badges/${badge.toLowerCase().replace(/ /g, '_')}.png`)}
+                  alt={badge}
+                  className="w-12 h-12"
+                />
+              ))}
+            </div>
             </div>
 
             {currentUser && currentUser !== profile.username && (
@@ -155,7 +159,7 @@ export default function PublicProfilePage() {
               ) : (
                 <button
                   onClick={handleFollow}
-                  className="mt-6 bg-[#7FAF92] text-black px-3 py-1 rounded hover:bg-[#5D749B]"
+                  className="mt-6 bg-[#7FAF92] text-[#E8E5DC] px-3 py-1 rounded hover:bg-[#5D749B]"
                 >
                   Follow
                 </button>

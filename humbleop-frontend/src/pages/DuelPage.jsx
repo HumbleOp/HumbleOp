@@ -179,7 +179,7 @@ export default function DuelPage() {
               onChange={(e) => setText(e.target.value)}
               placeholder="Write your duel comment here..."
               rows={4}
-              className="w-full p-2 rounded border text-black"
+              className="w-full p-2 rounded border text-[#E8E5DC]"
             />
             <button
               type="submit"

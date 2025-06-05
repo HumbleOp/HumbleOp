@@ -93,10 +93,11 @@ export default function ProfilePage() {
 
   return (
     <PageContainer>
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6 rounded-lg">
         <h2 className="text-2xl font-bold mb-6 text-[#7FAF92]">Welcome, {profile.username}!</h2>
 
         <div className="grid md:grid-cols-3 gap-6 items-start">
+          {/* Colonna avatar */}
           <div className="col-span-1">
             <strong className="block mb-2 text-[#5D749B]">Avatar:</strong>
             {profile.avatar_url && !editingAvatar ? (
@@ -108,17 +109,17 @@ export default function ProfilePage() {
                 />
                 <button
                   onClick={() => setEditingAvatar(true)}
-                  className="mt-2 text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                  className="mt-2 text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B] transition"
                 >
                   Edit Avatar
                 </button>
               </>
             ) : (
               <div className="flex flex-col gap-2">
-                <input type="file" ref={fileRef} accept="image/*" />
+                <input type="file" ref={fileRef} accept="image/*" className="text-sm text-gray-400" />
                 <button
                   onClick={uploadAvatar}
-                  className="text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                  className="text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B] transition"
                 >
                   Upload Avatar
                 </button>
@@ -126,6 +127,7 @@ export default function ProfilePage() {
             )}
           </div>
 
+          {/* Colonna bio, followers, following */}
           <div className="col-span-2">
             <strong className="block mb-2 text-[#5D749B]">Bio:</strong>
             {editingBio || !profile.bio ? (
@@ -134,87 +136,105 @@ export default function ProfilePage() {
                   value={bioInput}
                   onChange={e => setBioInput(e.target.value)}
                   rows={4}
-                  className="w-full p-2 border rounded text-black"
+                  className="w-full p-2 border rounded bg-[#16221C] text-[#E8E5DC]"
                 />
                 <button
                   onClick={updateProfile}
-                  className="self-start text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                  className="self-start text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B] transition"
                 >
                   Save Bio
                 </button>
               </div>
             ) : (
               <p className="flex justify-between items-center">
-                <span>{profile.bio}</span>
+                <span className="text-[#E8E5DC]">{profile.bio}</span>
                 <button
                   onClick={() => setEditingBio(true)}
-                  className="text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B]"
+                  className="text-sm text-white bg-[#7FAF92] px-3 py-1 rounded hover:bg-[#5D749B] transition"
                 >
                   Edit Bio
                 </button>
               </p>
             )}
+
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
-            <div>
-              <h3 className="text-[#7FAF92] font-semibold mb-2">Followers</h3>
-              {profile.followers?.length > 0 ? (
-                <ul className="space-y-1">
-                  {profile.followers.map((u) => (
-                    <li key={u}>
-                      <Link
-                        to={u === profile.username ? "/profile" : `/profile/${u}`}
-                        className="text-[#A1D9B4] hover:underline"
-                      >
-                        {u}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="italic text-gray-500">No followers yet.</p>
-              )}
-            </div>
+              {/* Followers */}
+              <div>
+                <h3 className="text-[#7FAF92] font-semibold mb-2">Followers</h3>
+                {profile.followers?.length > 0 ? (
+                  <ul className="space-y-1">
+                    {profile.followers.map((u) => (
+                      <li key={u}>
+                        <Link
+                          to={u === profile.username ? "/profile" : `/profile/${u}`}
+                          className="text-[#A1D9B4] hover:underline"
+                        >
+                          {u}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="italic text-gray-500">No followers yet.</p>
+                )}
+              </div>
 
-            <div>
-              <h3 className="text-[#7FAF92] font-semibold mb-2">Following</h3>
-              {profile.following?.length > 0 ? (
-                <ul className="space-y-1">
-                  {profile.following.map((u) => (
-                    <li key={u}>
-                      <Link
-                        to={u === profile.username ? "/profile" : `/profile/${u}`}
-                        className="text-[#A1D9B4] hover:underline"
-                      >
-                        {u}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="italic text-gray-500">Not following anyone.</p>
-              )}
-            </div>
-          </div>
-
-            <div className="mt-6">
-              <strong className="block text-[#5D749B] mb-2">Badges:</strong>
-              <div className="flex flex-wrap gap-2">
-                {(profile.badges || []).map((badge, i) => (
-                  <span
-                    key={i}
-                    className="text-xs bg-[#E8E5DC] text-[#101B13] px-2 py-1 rounded shadow"
-                  >
-                    {badge}
-                  </span>
-                ))}
+              {/* Following */}
+              <div>
+                <h3 className="text-[#7FAF92] font-semibold mb-2">Following</h3>
+                {profile.following?.length > 0 ? (
+                  <ul className="space-y-1">
+                    {profile.following.map((u) => (
+                      <li key={u}>
+                        <Link
+                          to={u === profile.username ? "/profile" : `/profile/${u}`}
+                          className="text-[#A1D9B4] hover:underline"
+                        >
+                          {u}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="italic text-gray-500">Not following anyone.</p>
+                )}
               </div>
             </div>
 
+            {/* Badges */}
+            <div className="mt-6">
+              <strong className="block text-[#5D749B] mb-2">Badges:</strong>
+              <div className="flex flex-wrap gap-2">
+                {(profile.badges || []).map((badge, i) => {
+                  // badge.toLowerCase() deve corrispondere al nome del file in src/assets/badges/, ad esempio "baptism-of-fire.png"
+                  return (
+                    <img
+                      key={i}
+                      src={require(`../assets/badges/${badge.toLowerCase().replace(/ /g, '_')}.png`)}
+                      alt={badge}
+                      className="w-12 h-12"
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* New Post & See All Posts */}
             <div className="mt-6 flex gap-4 text-sm">
-              <Link to="/create" className="text-[#7FAF92] underline">
-                📝 New Post
+              <Link
+                to="/create"
+                className="bg-[#7FAF92] text-black px-4 py-2 rounded hover:bg-[#5D749B] transition flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                New Post
               </Link>
-              <Link to="/posts" className="text-[#7FAF92] underline">
+              <Link to="/posts" className="text-[#7FAF92] underline hover:text-[#A1D9B4]">
                 See all posts
               </Link>
             </div>

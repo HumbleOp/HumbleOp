@@ -105,11 +105,15 @@ export default function PostDetail() {
     <PageContainer>
       <div className="max-w-4xl mx-auto px-4 py-6">
         <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">
-          <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">
-            Post by <Link to={currentUser === post.author ? '/profile' : `/profile/${post.author}`} className="text-[#A1D9B4] hover:underline">{post.author}</Link>
-          </h2>
+          Post by{' '}
+          <Link
+            to={currentUser === post.author ? '/profile' : `/profile/${post.author}`}
+            className="text-[#A1D9B4] hover:underline"
+          >
+            {post.author}
+          </Link>
         </h2>
-        <p className="mb-4">{post.body}</p>
+        <p className="mb-4 text-[#E8E5DC]">{post.body}</p>
 
         {post.media?.length > 0 && (
           <div className="mb-4">
@@ -137,7 +141,11 @@ export default function PostDetail() {
             ) : '—'
           }</p>
 
-          <p><strong className="text-[#5D749B]">Votes end in:</strong> {post.voting_ends_in} seconds</p>
+          <p className="text-[#E8E5DC]">
+            <strong className="text-[#5D749B]">Votes end in:</strong>{' '}
+            <span className="text-yellow-400">{post.voting_ends_in}</span>{' '}
+            seconds
+          </p>
           {post.winner && post.second && post.started && (
             <p className="text-sm text-yellow-400">
               <Link to={`/duel/${post.id}`} className="underline hover:text-yellow-200">
@@ -159,12 +167,13 @@ export default function PostDetail() {
                     {c.commenter}
                   </Link>:
                 </strong>
-                 {c.text} <span className="text-sm text-gray-400">({c.votes} votes)</span>
+                 <span className="ml-1 text-[#E8E5DC]">{c.text}</span>{' '}
+                 <span className="text-gray-400">({c.votes} votes)</span>
                 {!post.completed && token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
                   votedFor === null ? (
                     <button
                       onClick={() => handleVote(c.commenter)}
-                      className="ml-4 text-sm bg-[#7FAF92] text-black px-2 py-1 rounded hover:bg-[#5D749B]"
+                      className="ml-4 text-sm bg-[#7FAF92] text-[#E8E5DC] px-2 py-1 rounded hover:bg-[#5D749B]"
                     >
                       Vote
                     </button>
@@ -194,12 +203,12 @@ export default function PostDetail() {
                 value={commentText}
                 onChange={e => setCommentText(e.target.value)}
                 rows={4}
-                className="w-full p-2 border rounded text-black"
+                className="w-full p-2 border rounded text-[#E8E5DC]"
                 placeholder="Write your comment..."
               />
               <button
                 type="submit"
-                className="mt-2 bg-[#7FAF92] text-black px-4 py-2 rounded hover:bg-[#5D749B]"
+                className="mt-2 bg-[#7FAF92] text-[#E8E5DC] px-4 py-2 rounded hover:bg-[#5D749B]"
               >
                 Submit
               </button>

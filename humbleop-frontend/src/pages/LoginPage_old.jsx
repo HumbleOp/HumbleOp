@@ -1,39 +1,36 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 import logo from '../assets/logo.png';
-import registerBg from '../assets/login-bg.png'; // Puoi sostituirlo con un'immagine dedicata
+import loginBg from '../assets/login-bg.png'; // assuming this is the generated illustration
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  async function handleRegister(e) {
+  async function handleLogin(e) {
     e.preventDefault();
-    try {
-      const res = await fetch('http://localhost:5000/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || 'Registration failed');
-        return;
-      }
-      toast.success('Registration successful! Redirecting to login...');
-      setTimeout(() => navigate('/'), 1500);
-    } catch (err) {
-      toast.error(err.message || 'An error occurred');
+    const res = await fetch('http://localhost:5000/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || 'Login failed');
+      return;
     }
+    login(data.access_token);
+    navigate('/posts');
   }
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* Left: Registration Form with gradient */}
+      {/* Left: Login Form with gradient */}
       <div
         className="flex flex-col justify-center items-start md:items-center px-8 py-12 space-y-8"
         style={{
@@ -42,32 +39,14 @@ export default function RegisterPage() {
         }}
       >
         <img src={logo} alt="HumbleOp Logo" className="h-84 md:h-72" />
-
-        <div className="space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#E8E5DC] tracking-wide">
-            Join HumbleOp
-          </h1>
-          <p className="text-sm text-gray-400 max-w-sm">
-            Dive into engaging debates, earn badges, and show your support or raise flags. Become a part of our community today!
-          </p>
-        </div>
-
-        <form onSubmit={handleRegister} className="w-full max-w-sm space-y-5">
+        <h1 className="text-3xl md:text-4xl font-bold text-[#E8E5DC] tracking-wide">Log in</h1>
+        <form onSubmit={handleLogin} className="w-full max-w-sm space-y-5">
           <input
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
-            required
           />
           <input
             type="password"
@@ -75,18 +54,17 @@ export default function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
-            required
           />
           <button
             type="submit"
             className="w-full bg-[#7FAF92] text-[#E8E5DC] py-3 rounded font-semibold tracking-wide hover:bg-[#5D749B] hover:text-white transition"
           >
-            REGISTER
+            LOG IN
           </button>
           <p className="text-sm text-gray-400 text-center">
-            Already have an account?{' '}
-            <Link to="/" className="text-[#7FAF92] underline">
-              Log in here
+            Don&rsquo;t have an account yet?{' '}
+            <Link to="/register" className="text-[#7FAF92] underline">
+              Sign up here
             </Link>
           </p>
         </form>
@@ -96,12 +74,12 @@ export default function RegisterPage() {
       <div
         className="hidden md:flex flex-col justify-center items-center p-8"
         style={{
-          backgroundImage: `url(${registerBg})`,
+          backgroundImage: `url(${loginBg})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
-        {/* Sfondo illustrato */}
+        {/* Background illustration only */}
       </div>
     </div>
   );

@@ -31,7 +31,7 @@ export default function CreatePost() {
         <h1 className="text-2xl font-bold text-[#7FAF92] mb-4">Create a New Post</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block mb-1 text-sm">Post Content</label>
+            <label className="block mb-1 text-[#E8E5DC]">Post Content</label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -42,12 +42,12 @@ export default function CreatePost() {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm">Voting duration (hours)</label>
+            <label className="block mb-1 text-[#E8E5DC]">Voting duration (hours)</label>
             <input
               type="number"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full p-2 rounded border text-black"
+              className="w-full p-2 rounded border text-[#E8E5DC]"
               min="1"
               max="72"
             />
