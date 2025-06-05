@@ -203,7 +203,7 @@ export default function PostDetail() {
                 value={commentText}
                 onChange={e => setCommentText(e.target.value)}
                 rows={4}
-                className="w-full p-2 border rounded text-[#E8E5DC]"
+                className="w-full p-2 border rounded bg-[#16221C] text-[#E8E5DC]"
                 placeholder="Write your comment..."
               />
               <button

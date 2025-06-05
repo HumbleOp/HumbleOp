@@ -690,11 +690,11 @@ def start_now(post_id):
 @posts_bp.route("/duel_comment/<post_id>", methods=["POST"])
 @login_required
 def add_duel_comment(post_id):
-    if post.completed:
-      return error("Post is completed. Duel is over.", 403)
     post = db.session.get(Post, post_id)
     if not post:
         return error("Post not found.", 404)
+    if post.completed:
+      return error("Post is completed. Duel is over.", 403)
     if not post.started:
         return error("Duel not started", 400)
 

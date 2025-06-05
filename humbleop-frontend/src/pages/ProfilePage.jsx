@@ -206,13 +206,12 @@ export default function ProfilePage() {
               <strong className="block text-[#5D749B] mb-2">Badges:</strong>
               <div className="flex flex-wrap gap-2">
                 {(profile.badges || []).map((badge, i) => {
-                  // badge.toLowerCase() deve corrispondere al nome del file in src/assets/badges/, ad esempio "baptism-of-fire.png"
                   return (
                     <img
                       key={i}
                       src={require(`../assets/badges/${badge.toLowerCase().replace(/ /g, '_')}.png`)}
                       alt={badge}
-                      className="w-12 h-12"
+                      className="w-[100px] h-[100px]"
                     />
                   );
                 })}

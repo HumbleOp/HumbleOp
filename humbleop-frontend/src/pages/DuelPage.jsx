@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useApi } from '../hooks/useApi';
 import { toast } from "react-hot-toast";
@@ -9,7 +9,6 @@ import PageContainer from "../components/PageContainer";
 export default function DuelPage() {
   const { id } = useParams();
   const { token } = useAuth();
-  const navigate = useNavigate();
   const { request, loading, error } = useApi();
 
   const [post, setPost] = useState(null);
@@ -28,7 +27,6 @@ export default function DuelPage() {
       setComments(Array.isArray(duelCommentsData) ? duelCommentsData : []);
       setCurrentUser(profileData.username);
     } catch (err) {
-      console.error("Duel fetch failed:", err);
       toast.error("Failed to load duel data");
     }
   }, [id, token, request]);
@@ -50,7 +48,6 @@ export default function DuelPage() {
       const updatedComments = await request(`/duel_comments/${id}`);
       setComments(Array.isArray(updatedComments) ? updatedComments : []);
     } catch (err) {
-      console.error("Comment submit failed:", err);
       toast.error("Failed to submit comment");
     }
   }
@@ -154,7 +151,7 @@ export default function DuelPage() {
         </div>
 
         <div>
-          <h2 className="font-semibold mb-2 text-[#5D749B]">Duel Comments</h2>
+          <h2 className="font-semibold mb-2 text-[#5D749B]">Duel messages</h2>
           {comments.length === 0 ? (
             <p className="italic text-gray-400">No comments yet.</p>
           ) : (
@@ -165,7 +162,10 @@ export default function DuelPage() {
                     <Link to={currentUser === c.commenter ? '/profile' : `/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">
                     {c.commenter}
                   </Link>
-                  </strong>: {c.text}
+                  </strong>:
+                    <span className="text-white">
+                      {c.text}
+                    </span>
                 </li>
               ))}
             </ul>
@@ -177,9 +177,9 @@ export default function DuelPage() {
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Write your duel comment here..."
+              placeholder="Write your duel message here..."
               rows={4}
-              className="w-full p-2 rounded border text-[#E8E5DC]"
+              className="w-full p-2 rounded border bg-[#16221C] text-[#E8E5DC]"
             />
             <button
               type="submit"
@@ -193,7 +193,7 @@ export default function DuelPage() {
 
         {!canComment && !post.completed && duelers.includes(currentUser) && (
           <p className="text-gray-400 italic mt-4">
-            Waiting for your turn to comment.
+            Waiting for your turn to message.
           </p>
         )}
 

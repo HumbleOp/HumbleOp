@@ -36,18 +36,18 @@ export default function CreatePost() {
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={4}
-              className="w-full p-2 rounded border text-black"
+              className="w-full p-2 rounded border bg-[#16221C] text-[#E8E5DC]"
               placeholder="Share your debate topic or opinion..."
               required
             />
           </div>
           <div>
-            <label className="block mb-1 text-[#E8E5DC]">Voting duration (hours)</label>
+            <label className="block mb-1 bg-[#16221C] text-[#E8E5DC]">Voting duration (hours)</label>
             <input
               type="number"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full p-2 rounded border text-[#E8E5DC]"
+              className="w-full p-2 rounded border bg-[#16221C] text-[#E8E5DC]"
               min="1"
               max="72"
             />
