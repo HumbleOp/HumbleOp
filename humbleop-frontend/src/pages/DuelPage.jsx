@@ -35,6 +35,15 @@ export default function DuelPage() {
     fetchData();
   }, [fetchData]);
 
+  // --- Polling: every 5 seconds, re-fetch duel data so the other duelist sees updates in real time ---
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 5000); // 5000ms = 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [fetchData]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!text.trim()) {
@@ -79,48 +88,48 @@ export default function DuelPage() {
     <PageContainer>
       {post && !post.completed && post.winner && currentUser && currentUser !== post.author && currentUser !== post.winner && (
         <div className="mb-4 flex gap-4">
-          {!post.like_users?.includes(currentUser) && (
-            <button
-              className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded"
-              onClick={async () => {
-                try {
-                  await request(`/like/${post.id}`, 'POST');
-                  toast.success("You liked the winner!");
-                  fetchData();
-                } catch (err) {
-                  toast.error("Failed to like.");
-                }
-              }}
-            >
-              👍 Like {post.winner}
-            </button>
-          )}
+          {!post.like_users?.includes(currentUser) &&
+          !post.flag_users?.includes(currentUser) && (
+            <>
+              <button
+                className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded"
+                onClick={async () => {
+                  try {
+                    await request(`/like/${post.id}`, 'POST');
+                    toast.success("You liked the winner!");
+                    fetchData();
+                  } catch (err) {
+                    toast.error("Failed to like.");
+                  }
+                }}
+              >
+                👍 Like {post.winner}
+              </button>
 
-          {!post.flag_users?.includes(currentUser) && (
-            <button
-              className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded"
-              onClick={async () => {
-                try {
-                  await request(`/flag/${post.id}`, 'POST');
-                  toast.success("You flagged the winner.");
-                  fetchData();
-                } catch (err) {
-                  toast.error("Failed to flag.");
-                }
-              }}
-            >
-              🚩 Flag {post.winner}
-            </button>
+              <button
+                className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded"
+                onClick={async () => {
+                  try {
+                    await request(`/flag/${post.id}`, 'POST');
+                    toast.success("You flagged the winner.");
+                    fetchData();
+                  } catch (err) {
+                    toast.error("Failed to flag.");
+                  }
+                }}
+              >
+                🚩 Flag {post.winner}
+              </button>
+            </>
           )}
-
           {post.like_users?.includes(currentUser) && (
             <span className="text-green-400">You already liked {post.winner}</span>
-          )}
-
+          )}          
           {post.flag_users?.includes(currentUser) && (
             <span className="text-red-400">You already flagged {post.winner}</span>
           )}
         </div>
+
       )}
 
       <div className="max-w-3xl mx-auto">
@@ -205,19 +214,69 @@ export default function DuelPage() {
 
         {duelers.includes(currentUser) && !post.completed && (
           <div className="mt-6">
+            {/*
+              If neither side has clicked, both see the blue button.
+              If the other side has clicked, but you haven't, you see a notification + button.
+              If you have already clicked, but the other hasn't, you see "Waiting for the other to confirm".
+            */}
+            {currentUser === post.author && !post.duel_completed_by_author && !post.duel_completed_by_winner && (
+              <>
+                <button
+                  onClick={handleCompleteDuel}
+                  className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  ✋ Let’s shake hands and close this
+                </button>
+              </>
+            )}
+
+            {currentUser === post.winner && !post.duel_completed_by_winner && !post.duel_completed_by_author && (
+              <>
+                <button
+                  onClick={handleCompleteDuel}
+                  className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  ✋ Let’s shake hands and close this
+                </button>
+              </>
+            )}
+
+            {/* If author clicked but winner didn't, and currentUser is winner --> notify */}
+            {post.duel_completed_by_author && currentUser === post.winner && !post.duel_completed_by_winner && (
+              <div className="space-y-2">
+                <p className="text-yellow-300 font-semibold">
+                  {post.author} wants to close the duel.
+                </p>
+                <button
+                  onClick={handleCompleteDuel}
+                  className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  ✋ Let’s shake hands and close this
+                </button>
+              </div>
+            )}
+            {/* If winner clicked but author didn't, and currentUser is author --> notify */}
+            {post.duel_completed_by_winner && currentUser === post.author && !post.duel_completed_by_author && (
+              <div className="space-y-2">
+                <p className="text-yellow-300 font-semibold">
+                  {post.winner} wants to close the duel.
+                </p>
+                <button
+                  onClick={handleCompleteDuel}
+                  className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  ✋ Let’s shake hands and close this
+                </button>
+              </div>
+            )}
+
+            {/* If currentUser already clicked, but other hasn't: show waiting message */}
             {(
-              (currentUser === post.author && !post.duel_completed_by_author) ||
-              (currentUser === post.winner && !post.duel_completed_by_winner)
-            ) ? (
-              <button
-                onClick={handleCompleteDuel}
-                className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                ✋ Let’s shake hands and close this
-              </button>
-            ) : (
+              (currentUser === post.author && post.duel_completed_by_author && !post.duel_completed_by_winner) ||
+              (currentUser === post.winner && post.duel_completed_by_winner && !post.duel_completed_by_author)
+            ) && (
               <p className="mt-2 text-sm italic text-yellow-300">
-                Waiting for the other duelist to shake hands...
+                Waiting for the other duelist to confirm...
               </p>
             )}
           </div>

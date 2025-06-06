@@ -6,6 +6,14 @@ import { useApi } from '../hooks/useApi';
 import { toast } from 'react-hot-toast';
 import PageContainer from '../components/PageContainer';
 
+function formatTimeLeft(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${secs}s`;
+}
+
 export default function PostDetail() {
   const { id } = useParams();
   const { token } = useAuth();
@@ -17,6 +25,8 @@ export default function PostDetail() {
   const [commentText, setCommentText] = useState('');
   const [votedFor, setVotedFor] = useState(null);
   const [alreadyCommented, setAlreadyCommented] = useState(false);
+  const [endTime, setEndTime] = useState(null);    // timestamp (in ms) when voting ends
+  const [timeLeft, setTimeLeft] = useState(null); 
 
 
   const fetchDetails = useCallback(async () => {
@@ -26,6 +36,9 @@ export default function PostDetail() {
 
       setPost(postData);
       setComments(commentData.comments || []);
+      if (postData.voting_ends_in != null) {
+        setEndTime(Date.now() + postData.voting_ends_in * 1000);
+      }
       if (token && postData.author) {
         const res = await fetch('http://localhost:5000/profile', {
           headers: { 'Authorization': 'Bearer ' + token }
@@ -66,6 +79,26 @@ export default function PostDetail() {
       toast.error(err.message || 'Failed to comment');
     }
   }
+
+  useEffect(() => {
+    if (endTime == null) return; // wait until endTime is set
+
+    // Immediately compute the initial seconds left
+    const initialLeft = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
+    setTimeLeft(initialLeft);
+
+    // Create an interval that updates timeLeft every second
+    const intervalId = setInterval(() => {
+      const diff = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
+      setTimeLeft(diff);
+      if (diff <= 0) {
+        clearInterval(intervalId);
+        fetchDetails();
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [endTime]);
 
   async function handleVote(candidate) {
     try {
@@ -140,11 +173,11 @@ export default function PostDetail() {
               <Link to={currentUser === post.second ? '/profile' : `/profile/${post.second}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link>
             ) : '—'
           }</p>
-
           <p className="text-[#E8E5DC]">
             <strong className="text-[#5D749B]">Votes end in:</strong>{' '}
-            <span className="text-yellow-400">{post.voting_ends_in}</span>{' '}
-            seconds
+            <span className="text-yellow-400">
+              {timeLeft != null ? formatTimeLeft(timeLeft) : 'Loading...'}
+            </span>
           </p>
           {post.winner && post.second && post.started && (
             <p className="text-sm text-yellow-400">

@@ -47,6 +47,7 @@ def finalize_voting_phase(post_id):
     post.winner = winner
     post.second = second
     post.initial_votes = iv
+    post.started = True 
     db.session.commit()
 
 @posts_bp.route("/create_post/<post_id>", methods=["POST"])
@@ -582,10 +583,11 @@ def like(post_id):
       404:
         description: Post not found
     """
+   
+    post = db.session.get(Post, post_id)
     if post.completed:
       return error("Post is completed. No more voting allowed.", 403)
-
-    post = db.session.get(Post, post_id)
+   
     if not post:
         return error("Post not found.", 404)
     liker = g.current_user.username
@@ -595,7 +597,11 @@ def like(post_id):
         return error("Post has no winner yet.", 400)
     if liker in (post.author, post.winner):
         return error("Authors and winners cannot like.", 403)
-    db.session.add(Like(post_id=post_id, liker=liker))
+    if Flag.query.filter_by(post_id=post_id, flagger=liker).first():
+      return error(f"Non puoi mettere like dopo aver flaggato questo post.", 403)
+
+    new_like = Like(post_id=post_id, liker=liker)
+    db.session.add(new_like)
     db.session.commit()
     return success({"status": "Like registered"}, 200)
 
@@ -625,12 +631,13 @@ def flag(post_id):
       404:
         description: Post not found
     """
+    post = db.session.get(Post, post_id)
+    if not post:
+      return error("Post not found.", 404)
+
     if post.completed:
       return error("Post is completed. No more voting allowed.", 403)
 
-    post = db.session.get(Post, post_id)
-    if not post:
-        return error("Post not found.", 404)
     
     if not post.started:
         return error("Duel has not started yet.", 400)
@@ -645,8 +652,12 @@ def flag(post_id):
     
     if flagger in (post.author, post.winner):
         return error("Authors and winners cannot flag.", 403)
+    if Like.query.filter_by(post_id=post_id, liker=flagger).first():
+      return error(f"Non puoi mettere flag dopo aver messo like a questo post.", 403)
+
     
-    db.session.add(Flag(post_id=post_id, flagger=flagger))
+    new_flag = Flag(post_id=post_id, flagger=flagger)
+    db.session.add(new_flag)
     db.session.commit()
     
     switched, old, new = evaluate_flags_and_maybe_switch(post)

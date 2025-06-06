@@ -1,9 +1,12 @@
+// src/pages/RegisterPage.jsx
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import logo from '../assets/logo.png';
-import registerBg from '../assets/login-bg.png'; // Puoi sostituirlo con un'immagine dedicata
+// Importa qui il file di sfondo che hai messo in src/assets
+import customBg from '../assets/bg_log_reg.png';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -32,27 +35,23 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* Left: Registration Form with gradient */}
-      <div
-        className="flex flex-col justify-center items-start md:items-center px-8 py-12 space-y-8"
-        style={{
-          background: 'linear-gradient(to right, #0f160f 0%, #222b22 100%)',
-          color: 'white',
-        }}
-      >
-        <img src={logo} alt="HumbleOp Logo" className="h-84 md:h-72" />
-
-        <div className="space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#E8E5DC] tracking-wide">
-            Join HumbleOp
-          </h1>
-          <p className="text-sm text-gray-400 max-w-sm">
+    <div
+      className="min-h-screen flex justify-center items-center px-8 py-12"
+      style={{
+        backgroundImage: `url(${customBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <div className="w-full max-w-md space-y-8 bg-black/50 p-6 rounded">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold text-[#E8E5DC]">Join HumbleOp</h1>
+          <p className="text-sm text-gray-200">
             Dive into engaging debates, earn badges, and show your support or raise flags. Become a part of our community today!
           </p>
         </div>
 
-        <form onSubmit={handleRegister} className="w-full max-w-sm space-y-5">
+        <form onSubmit={handleRegister} className="space-y-5">
           <input
             type="text"
             placeholder="Username"
@@ -83,25 +82,13 @@ export default function RegisterPage() {
           >
             REGISTER
           </button>
-          <p className="text-sm text-gray-400 text-center">
+          <p className="text-sm text-gray-200 text-center">
             Already have an account?{' '}
             <Link to="/" className="text-[#7FAF92] underline">
               Log in here
             </Link>
           </p>
         </form>
-      </div>
-
-      {/* Right: Visual Section */}
-      <div
-        className="hidden md:flex flex-col justify-center items-center p-8"
-        style={{
-          backgroundImage: `url(${registerBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        {/* Sfondo illustrato */}
       </div>
     </div>
   );

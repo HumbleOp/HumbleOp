@@ -1,9 +1,15 @@
+// src/components/PageContainer.jsx
+import React from 'react';
+import customBg from '../assets/bg_whole.png';
+
 export default function PageContainer({ children }) {
   return (
     <div
-      className="min-h-screen px-4 py-6"
+      className="min-h-screen px-1 py-3"
       style={{
-         background: 'linear-gradient(to right, #0f160f 0%, #222b22 100%)',
+        backgroundImage: `url(${customBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       }}
     >
       {children}

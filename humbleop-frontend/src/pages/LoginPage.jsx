@@ -1,10 +1,13 @@
+// src/pages/LoginPage.jsx
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 import logo from '../assets/logo.png';
-import loginBg from '../assets/login-bg.png'; // assuming this is the generated illustration
+// Importa qui il tuo sfondo personalizzato
+import customBg from '../assets/bg_log_reg.png';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -29,58 +32,48 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* Left: Login Form with gradient */}
-      <div
-        className="flex flex-col justify-center items-start md:items-center px-8 py-12 space-y-8"
-        style={{
-          background: 'linear-gradient(to right, #0f160f 0%, #222b22 100%)',
-          color: 'white',
-        }}
-      >
-        <img src={logo} alt="HumbleOp Logo" className="h-84 md:h-72" />
-        <h1 className="text-3xl md:text-4xl font-bold text-[#E8E5DC] tracking-wide">Log in</h1>
-        <form onSubmit={handleLogin} className="w-full max-w-sm space-y-5">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
-          />
-          <button
-            type="submit"
-            className="w-full bg-[#7FAF92] text-[#E8E5DC] py-3 rounded font-semibold tracking-wide hover:bg-[#5D749B] hover:text-white transition"
-          >
-            LOG IN
-          </button>
-          <p className="text-sm text-gray-400 text-center">
-            Don&rsquo;t have an account yet?{' '}
-            <Link to="/register" className="text-[#7FAF92] underline">
-              Sign up here
-            </Link>
-          </p>
-        </form>
+    <div
+      className="min-h-screen flex flex-col md:flex-row"
+      style={{
+        backgroundImage: `url(${customBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <div className="flex-1 flex justify-center items-center px-8 py-12">
+        <div className="w-full max-w-md space-y-8 bg-black/50 p-6 rounded">
+         <h1 className="text-3xl font-bold text-[#E8E5DC] text-center">Log in</h1>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 rounded bg-[#1A2A20] text-white border border-[#5D749B] focus:outline-none focus:ring-2 focus:ring-[#7FAF92]"
+            />
+            <button
+              type="submit"
+              className="w-full bg-[#7FAF92] text-[#E8E5DC] py-3 rounded font-semibold tracking-wide hover:bg-[#5D749B] hover:text-white transition"
+            >
+              LOG IN
+            </button>
+            <p className="text-sm text-gray-200 text-center">
+              Don&apos;t have an account yet?{' '}
+              <Link to="/register" className="text-[#7FAF92] underline">
+                Register here
+              </Link>
+            </p>
+          </form>
+        </div>
       </div>
-
-      {/* Right: Visual Section */}
-      <div
-        className="hidden md:flex flex-col justify-center items-center p-8"
-        style={{
-          backgroundImage: `url(${loginBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        {/* Background illustration only */}
-      </div>
+      {/* Se non serve una seconda colonna, puoi toglierla */}
     </div>
   );
 }
