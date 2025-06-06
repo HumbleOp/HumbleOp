@@ -33,6 +33,21 @@ export default function PostDetail() {
     try {
       const postData = await request(`/status/${id}`);
       const commentData = await request(`/comments/${id}`);
+          console.log('–– DEBUG /status:', {
+          voting_ends_in: postData.voting_ends_in,
+          started:       postData.started,
+          winner:        postData.winner,
+          second:        postData.second
+        });
+
+      if (postData.started) {
+        setEndTime(null);
+        setTimeLeft(null);
+    } else { {
+        setEndTime(null);
+      }
+      // Non toccare timeLeft qui: lo gestisce l'useEffect sul countdown
+    }
 
       setPost(postData);
       setComments(commentData.comments || []);

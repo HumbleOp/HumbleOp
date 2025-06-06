@@ -1,10 +1,12 @@
 import os
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
 from core.extensions import db, scheduler
+from routes.posts import finalize_voting_phase
 from models import Post
 
 if os.getenv("DATABASE_URL", "").startswith("postgresql://"):
@@ -57,6 +59,14 @@ def create_app(config=None):
     with app.app_context():
         from models import User, Post, Comment, Vote, Flag, Like, Badge, Tag, post_tags
         db.create_all()
+        expired_posts = Post.query.filter(
+            Post.voting_deadline <= datetime.utcnow(),
+            Post.started == False
+        ).all()
+        for post in expired_posts:
+            finalize_voting_phase(post.id)
+        scheduler.start()
+
 
     from routes.auth import auth_bp
     from routes.posts import posts_bp
@@ -115,10 +125,10 @@ def create_app(config=None):
 
     return app
 
-if __name__ == "__main__":
-    app = create_app()
-    with app.app_context():
-        scheduler.start()
-    app.run(debug=True)
+#if __name__ == "__main__":
+#    app = create_app()
+#    with app.app_context():
+#        scheduler.start()
+#    app.run(debug=True)
 
 

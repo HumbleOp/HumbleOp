@@ -27,6 +27,7 @@ def login_required(f):
     return wrapper
 
 def finalize_voting_phase(post_id):
+    print(f"[DEBUG] finalize_voting_phase chiamato per post_id={post_id}")
     post = db.session.get(Post, post_id)
     if not post:
         return
