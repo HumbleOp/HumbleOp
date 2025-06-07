@@ -61,9 +61,9 @@ export default function SearchResults() {
         <h1 className="text-2xl font-bold mb-6 text-[#7FAF92]">Search Results for &quot;{q}&quot;</h1>
 
         <div className="flex gap-2 mb-6">
-          <button onClick={() => setFilter("all")} className={`px-3 py-1 rounded ${filter === "all" ? "bg-[#7FAF92] text-black" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>All</button>
-          <button onClick={() => setFilter("users")} className={`px-3 py-1 rounded ${filter === "users" ? "bg-[#7FAF92] text-black" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>Users</button>
-          <button onClick={() => setFilter("posts")} className={`px-3 py-1 rounded ${filter === "posts" ? "bg-[#7FAF92] text-black" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>Posts</button>
+          <button onClick={() => setFilter("all")} className={`px-3 py-1 rounded ${filter === "all" ? "bg-[#7FAF92] text-[#E8E5DC]" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>All</button>
+          <button onClick={() => setFilter("users")} className={`px-3 py-1 rounded ${filter === "users" ? "bg-[#7FAF92] text-[#E8E5DC]" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>Users</button>
+          <button onClick={() => setFilter("posts")} className={`px-3 py-1 rounded ${filter === "posts" ? "bg-[#7FAF92] text-[#E8E5DC]" : "bg-[#2F3F30] text-[#E8E5DC]"}`}>Posts</button>
         </div>
 
         {(filter === "all" || filter === "users") && (

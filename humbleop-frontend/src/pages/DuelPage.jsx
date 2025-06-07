@@ -158,28 +158,44 @@ export default function DuelPage() {
             ))}
           </ul>
         </div>
-
-        <div>
-          <h2 className="font-semibold mb-2 text-[#5D749B]">Duel messages</h2>
-          {comments.length === 0 ? (
-            <p className="italic text-gray-400">No comments yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {comments.map((c, i) => (
-                <li key={i} className="bg-[#142017] p-3 rounded shadow">
-                  <strong>
-                    <Link to={currentUser === c.commenter ? '/profile' : `/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">
-                    {c.commenter}
-                  </Link>
-                  </strong>:
-                    <span className="text-white">
-                      {c.text}
-                    </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div>
+        <h2 className="font-semibold mb-2 text-[#5D749B]">Duel messages</h2>
+        {comments.length === 0 ? (
+          <p className="italic text-gray-400">No comments yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {comments.map((c, i) => {
+              const alignRight = i % 2 === 1;
+              return (
+                <div
+                  key={i}
+                  className={`flex ${alignRight ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`
+                      max-w-[75%] p-3 rounded-lg shadow
+                      ${alignRight
+                        ? 'bg-[#01786c] text-white'
+                        : 'bg-[#c7c9c9] text-black' 
+                      }
+                    `}
+                  >
+                    <strong className="block mb-1">
+                      <Link
+                        to={`/profile/${c.commenter}`}
+                        className="hover:underline"
+                      >
+                        {c.commenter}
+                      </Link>
+                    </strong>
+                    <p>{c.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
         {canComment && !post.completed && (
           <form onSubmit={handleSubmit} className="mt-6">
@@ -278,7 +294,7 @@ export default function DuelPage() {
               <p className="mt-2 text-sm italic text-yellow-300">
                 Waiting for the other duelist to confirm...
               </p>
-            )}
+              )}
           </div>
         )}
         {post.flag_analysis && (
@@ -306,7 +322,7 @@ export default function DuelPage() {
           </div>
         )}
         {post.completed && (
-          <p className="text-yellow-400 mt-6 italic">⚔️ This duel has ended. No more comments, likes or flags allowed.</p>
+          <p className="text-yellow-400 mt-6 italic">🤝 Hands shaken by both! The duel is now complete. No more messages, likes or flags allowed.</p>
         )}
       </div>
     </PageContainer>

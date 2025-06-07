@@ -43,7 +43,7 @@ export default function CompletedPosts() {
             {posts.map((post) => (
               <li
                 key={post.id}
-                className="bg-[#1A2A20] p-4 rounded shadow hover:shadow-md transition"
+                className="bg-[#41116b] p-4 rounded shadow hover:shadow-md transition"
               >
                 <Link
                   to={`/post/${post.id}`}

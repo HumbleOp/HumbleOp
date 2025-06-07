@@ -87,7 +87,8 @@ def search():
             "media": p.media_urls,
             "winner": p.winner,
             "second": p.second,
-            "voting_ends_in": max(int((p.voting_deadline - datetime.now()).total_seconds()), 0) if p.voting_deadline else None
+            "voting_ends_in": max(int((p.voting_deadline - datetime.now()).total_seconds()), 0) if p.voting_deadline else None,
+            "created_at":    p.created_at.isoformat()
         }
             for p in posts
         ]

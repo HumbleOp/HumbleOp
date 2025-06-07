@@ -11,28 +11,24 @@ export default function Navbar() {
   const [query, setQuery] = useState("");
   const [placeholder, setPlaceholder] = useState("");
 
-
-    function handleSearch(e) {
+  function handleSearch(e) {
     e.preventDefault();
     if (query.trim()) {
-        navigate(`/search?q=${encodeURIComponent(query.trim())}`);
-        setQuery("");
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      setQuery("");
     }
-    }
+  }
 
-useEffect(() => {
-  const text = "Search debates...";
-  let i = 0;
-
-  const interval = setInterval(() => {
-    setPlaceholder(text.slice(0, i));
-    i++;
-    if (i > text.length) clearInterval(interval);
-  }, 70);
-
-  return () => clearInterval(interval);
-}, []);
-
+  useEffect(() => {
+    const text = "Search debates...";
+    let i = 0;
+    const interval = setInterval(() => {
+      setPlaceholder(text.slice(0, i));
+      i++;
+      if (i > text.length) clearInterval(interval);
+    }, 70);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -47,16 +43,18 @@ useEffect(() => {
   }, [token]);
 
   return (
-    <nav className="flex items-center justify-between px-6 py-3 bg-white shadow border-b sticky top-0 z-50">
+    <nav className="flex items-center justify-between px-6 py-3 bg-[#051605] shadow border-b sticky top-0 z-50">
       <div className="flex gap-4 items-center">
         <Link to="/posts" className="flex items-center gap-2">
           <img src={logo} alt="HumbleOp Logo" className="h-8 w-10" />
-          <span className="text-xl font-bold text-blue-700">HumbleOp</span>
+          <span className="text-xl font-bold text-[#517350]">HumbleOp</span>
         </Link>
         <NavLink
           to="/posts"
           className={({ isActive }) =>
-            isActive ? "text-blue-900 font-semibold" : "text-blue-700 hover:underline"
+            isActive
+              ? "text-[#9e9e9e] font-semibold"
+              : "text-[#9e9e9e] hover:underline"
           }
         >
           All Posts
@@ -64,7 +62,9 @@ useEffect(() => {
         <NavLink
           to="/completed"
           className={({ isActive }) =>
-            isActive ? "text-blue-900 font-semibold" : "text-blue-700 hover:underline"
+            isActive
+              ? "text-[#9e9e9e] font-semibold"
+              : "text-[#9e9e9e] hover:underline"
           }
         >
           Completed
@@ -74,47 +74,43 @@ useEffect(() => {
             <NavLink
               to="/create"
               className={({ isActive }) =>
-                isActive ? "text-blue-900 font-semibold" : "text-blue-700 hover:underline"
+                isActive
+                  ? "text-[#9e9e9e] font-semibold"
+                  : "text-[#9e9e9e] hover:underline"
               }
             >
               New Post
-            </NavLink>
-            <NavLink
-              to="/profile"
-              className={({ isActive }) =>
-                isActive ? "text-blue-900 font-semibold" : "text-blue-700 hover:underline"
-              }
-            >
-              Profile
             </NavLink>
           </>
         )}
       </div>
 
       {token && (
-        <div className="flex items-center gap-3 text-sm text-gray-700">
+        <div className="flex items-center gap-3 px-10 py-30 text-[#228a1d] font-extrabold">
           <form onSubmit={handleSearch} className="flex items-center gap-2">
             <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={placeholder}
-                className="border px-2 py-1 rounded text-black"
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={placeholder}
+              className="border px-2 py-1 rounded text-white"
             />
             <button
-                type="submit"
-                className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+              type="submit"
+              className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
             >
-                Go
+              Go
             </button>
-            </form>
-          <span>{username}</span>
+          </form>
+          <Link to="/profile" className="hover:underline">
+            {username}
+          </Link>
           <button
             onClick={() => {
               logout();
               navigate("/");
             }}
-            className="text-red-600 hover:underline"
+            className="text-xs font-sans font.thin text-red-600 hover:underline"
           >
             Logout
           </button>

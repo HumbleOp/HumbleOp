@@ -111,18 +111,18 @@ export default function PostList() {
           <ul className="space-y-4">
             {posts.map(post => {
               // Determine post status
-              const duelCompleted = post.completed === true;
+              const duelCompleted    = post.timeLeft === 0 && Boolean(post.winner);
               const duelInProgress = !duelCompleted && Boolean(post.winner);
               const votingInProgress = !post.winner && !post.completed;
 
               // Background color classes
               let bgClass = 'bg-[#1A2A20]'; // fallback dark
               if (duelCompleted) {
-                bgClass = 'bg-gray-800';
+                bgClass = 'bg-[#41116b]';
               } else if (duelInProgress) {
-                bgClass = 'bg-yellow-900';
+                bgClass = 'bg-[#a03809]';
               } else if (votingInProgress) {
-                bgClass = 'bg-green-800';
+                bgClass = 'bg-[#063835]';
               }
 
               // Truncate body to 200 chars
@@ -142,6 +142,14 @@ export default function PostList() {
                   </Link>
                   <p className="text-sm text-gray-400 mt-1">
                     by{' '}
+                    <div className="flex items-center gap-2 mb-4">
+                      <img
+                        src={`http://localhost:5000${post.author_avatar}`}
+                        alt={`${post.author} avatar`}
+                        className="w-10 h-10 rounded-full"
+                      />
+                      <span>{post.author}</span>
+                    </div>
                     <Link
                       to={currentUser === post.author ? '/profile' : `/profile/${post.author}`}
                       className="text-[#A1D9B4] hover:underline"
@@ -149,7 +157,11 @@ export default function PostList() {
                       {post.author}
                     </Link>
                   </p>
-
+                    <p className="text-sm text-gray-400 mt-1">
+                      Posted on {post.created_at
+                        ? new Date(post.created_at).toLocaleString()
+                        : '—'}
+                    </p>
                   <div className="mt-2 flex flex-col space-y-2">
                     {/* Voting in progress: show badge + live countdown */}
                     {votingInProgress && (

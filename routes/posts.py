@@ -27,7 +27,6 @@ def login_required(f):
     return wrapper
 
 def finalize_voting_phase(post_id):
-    print(f"[DEBUG] finalize_voting_phase chiamato per post_id={post_id}")
     post = db.session.get(Post, post_id)
     if not post:
         return
@@ -462,18 +461,24 @@ def get_status(post_id):
     votes = Vote.query.filter_by(post_id=post_id).all()
     ranking = Counter(v.candidate for v in votes)
     comments = Comment.query.filter_by(post_id=post_id).all()
-    comment_list = [
-          {
-        "commenter": c.commenter,
-        "text": c.text,
-        "votes": Vote.query.filter_by(post_id=post_id, candidate=c.commenter).count()
-          }
-      for c in comments
-    ]
+    author_user = User.query.get(post.author)
+    author_avatar = author_user.avatar_url if author_user else ""
+    comment_list = []
+    for c in comments:
+        # prendi anche l’avatar per ciascun commento
+        commenter_user = User.query.get(c.commenter)
+        comment_list.append({
+            "commenter": c.commenter,
+            "commenter_avatar": commenter_user.avatar_url if commenter_user else "",
+            "text": c.text,
+            "votes": Vote.query.filter_by(post_id=post_id, candidate=c.commenter).count()
+        })
+    
 
     return success({
         "id": post.id,
         "author": post.author,
+        "author_avatar": author_avatar,
         "body": post.body,
         "winner": post.winner,
         "second": post.second,
@@ -491,7 +496,8 @@ def get_status(post_id):
         "flag_analysis": flag_analysis,
         "duel_completed_by_author": post.duel_completed_by_author,
         "duel_completed_by_winner": post.duel_completed_by_winner,
-        "completed": post.completed
+        "completed": post.completed,
+        "created_at":    post.created_at.isoformat()
 
 
     }, 200)

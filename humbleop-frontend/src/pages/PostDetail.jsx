@@ -1,4 +1,3 @@
-// src/pages/PostDetail.jsx
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -25,35 +24,23 @@ export default function PostDetail() {
   const [commentText, setCommentText] = useState('');
   const [votedFor, setVotedFor] = useState(null);
   const [alreadyCommented, setAlreadyCommented] = useState(false);
-  const [endTime, setEndTime] = useState(null);    // timestamp (in ms) when voting ends
-  const [timeLeft, setTimeLeft] = useState(null); 
 
+  const [endTime, setEndTime] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
 
   const fetchDetails = useCallback(async () => {
     try {
       const postData = await request(`/status/${id}`);
       const commentData = await request(`/comments/${id}`);
-          console.log('–– DEBUG /status:', {
-          voting_ends_in: postData.voting_ends_in,
-          started:       postData.started,
-          winner:        postData.winner,
-          second:        postData.second
-        });
-
-      if (postData.started) {
-        setEndTime(null);
-        setTimeLeft(null);
-    } else { {
-        setEndTime(null);
-      }
-      // Non toccare timeLeft qui: lo gestisce l'useEffect sul countdown
-    }
-
       setPost(postData);
       setComments(commentData.comments || []);
-      if (postData.voting_ends_in != null) {
+
+      if (postData.voting_ends_in != null && postData.voting_ends_in > 0) {
         setEndTime(Date.now() + postData.voting_ends_in * 1000);
+      } else {
+        setEndTime(null);
       }
+
       if (token && postData.author) {
         const res = await fetch('http://localhost:5000/profile', {
           headers: { 'Authorization': 'Bearer ' + token }
@@ -61,27 +48,41 @@ export default function PostDetail() {
         const userData = await res.json();
         setCurrentUser(userData.username);
 
-        const votedComment = commentData.comments.find(c =>
+        const votedComment = (commentData.comments || []).find(c =>
           c.voters?.includes(userData.username)
         );
-        if (votedComment) {
-          setVotedFor(votedComment.commenter);
-        }
+        if (votedComment) setVotedFor(votedComment.commenter);
 
-        const hasCommented = commentData.comments.some(c =>
+        const hasCommented = (commentData.comments || []).some(c =>
           c.commenter === userData.username
         );
         setAlreadyCommented(hasCommented);
       }
-
     } catch {
-        // error handled by useApi
+      // handle errors
     }
   }, [id, token, request]);
 
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
+
+  useEffect(() => {
+    if (endTime == null) return;
+    const initialLeft = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
+    setTimeLeft(initialLeft);
+
+    const intervalId = setInterval(() => {
+      const diff = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
+      setTimeLeft(diff);
+      if (diff <= 0) {
+        clearInterval(intervalId);
+        fetchDetails();
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [endTime, fetchDetails]);
 
   async function handleCommentSubmit(e) {
     e.preventDefault();
@@ -94,26 +95,6 @@ export default function PostDetail() {
       toast.error(err.message || 'Failed to comment');
     }
   }
-
-  useEffect(() => {
-    if (endTime == null) return; // wait until endTime is set
-
-    // Immediately compute the initial seconds left
-    const initialLeft = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
-    setTimeLeft(initialLeft);
-
-    // Create an interval that updates timeLeft every second
-    const intervalId = setInterval(() => {
-      const diff = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
-      setTimeLeft(diff);
-      if (diff <= 0) {
-        clearInterval(intervalId);
-        fetchDetails();
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [endTime]);
 
   async function handleVote(candidate) {
     try {
@@ -129,9 +110,7 @@ export default function PostDetail() {
     try {
       const res = await fetch(`http://localhost:5000/unvote/${id}`, {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + token
-        }
+        headers: { 'Authorization': 'Bearer ' + token }
       });
       const data = await res.json();
       if (res.ok) {
@@ -152,57 +131,65 @@ export default function PostDetail() {
   return (
     <PageContainer>
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h2 className="text-xl font-bold mb-2 text-[#7FAF92]">
+        <h2 className="text-lg font-bold mb-2 text-[#7FAF92]">
           Post by{' '}
+          <div className="flex items-center gap-2 mb-4">
+            <img
+              src={`http://localhost:5000${post.author_avatar}`}
+              alt={`${post.author} avatar`}
+              className="w-10 h-10 rounded-full"
+            />
+            <span>{post.author}</span>
+          </div>
           <Link
             to={currentUser === post.author ? '/profile' : `/profile/${post.author}`}
-            className="text-[#A1D9B4] hover:underline"
+            className="text-xl font.bold text-[#A1D9B4] hover:underline"
           >
             {post.author}
           </Link>
+          <div className="mb-4 bg-black border border-white p-4 rounded">
+          <p className="text-sm text-gray-400">
+          Posted on {post.created_at ? new Date(post.created_at).toLocaleString(): '—'}
+        </p>
+        </div>
+
+
         </h2>
-        <p className="mb-4 text-[#E8E5DC]">{post.body}</p>
-
-        {post.media?.length > 0 && (
-          <div className="mb-4">
-            <strong className="text-[#5D749B]">Media:</strong>
-            <ul className="list-disc list-inside">
-              {post.media.map((url, index) => (
-                <li key={index}>
-                  <a href={url} target="_blank" rel="noreferrer" className="text-blue-300 underline">{url}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
+        <div className="mb-4 bg-black border border-white p-4 rounded">
+          <p className="antialiased mb-4 text-2xl font-mono text-[#ebebeb]">{post.body}</p>
+        </div>
+        {/* Media, results and duel link */}
         <div className="mb-6 space-y-1">
-          <p><strong className="text-[#5D749B]">Winner:</strong> {
-            post.winner ? (
-              <Link to={currentUser === post.winner ? '/profile' : `/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">{post.winner}</Link>
-            ) : '—'
-          }</p>
-
-          <p><strong className="text-[#5D749B]">Second:</strong> {
-            post.second ? (
-              <Link to={currentUser === post.second ? '/profile' : `/profile/${post.second}`} className="text-[#A1D9B4] hover:underline">{post.second}</Link>
-            ) : '—'
-          }</p>
-          <p className="text-[#E8E5DC]">
-            <strong className="text-[#5D749B]">Votes end in:</strong>{' '}
-            <span className="text-yellow-400">
-              {timeLeft != null ? formatTimeLeft(timeLeft) : 'Loading...'}
-            </span>
-          </p>
-          {post.winner && post.second && post.started && (
-            <p className="text-sm text-yellow-400">
-              <Link to={`/duel/${post.id}`} className="underline hover:text-yellow-200">
-                👉 Go to duel
+          <p>
+            <strong className="text-[#5D749B]">Winner:</strong>{' '}
+            {post.winner ? (
+              <Link to={`/profile/${post.winner}`} className="text-[#A1D9B4] hover:underline">
+                {post.winner}
               </Link>
+            ) : '—'}
+          </p>
+          <p>
+            <strong className="text-[#5D749B]">Second:</strong>{' '}
+            {post.second ? (
+              <Link to={`/profile/${post.second}`} className="text-[#A1D9B4] hover:underline">
+                {post.second}
+              </Link>
+            ) : '—'}
+          </p>
+          {!post.started && (
+            <p className="text-[#E8E5DC]">
+              <strong className="text-[#5D749B]">Votes end in:</strong>{' '}
+              <span className="text-yellow-400">{timeLeft != null ? formatTimeLeft(timeLeft) : '—'}</span>
+            </p>
+          )}
+          {post.started && post.winner && post.second && (
+            <p className="text-sm text-yellow-400">
+              <Link to={`/duel/${post.id}`} className="underline hover:text-yellow-200">👉 Go to duel</Link>
             </p>
           )}
         </div>
 
+        {/* Comments Section */}
         <h3 className="text-lg font-semibold mb-2 text-[#7FAF92]">Comments</h3>
         {comments.length === 0 ? (
           <p className="italic text-gray-400">No comments yet.</p>
@@ -211,27 +198,21 @@ export default function PostDetail() {
             {comments.map((c, i) => (
               <li key={i} className="border border-[#5D749B] p-3 rounded">
                 <strong>
-                  <Link to={currentUser === c.commenter ? '/profile' : `/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">
+                  <Link to={`/profile/${c.commenter}`} className="text-[#A1D9B4] hover:underline">
                     {c.commenter}
                   </Link>:
                 </strong>
-                 <span className="ml-1 text-[#E8E5DC]">{c.text}</span>{' '}
-                 <span className="text-gray-400">({c.votes} votes)</span>
-                {!post.completed && token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
+                <span className="ml-1 text-[#E8E5DC]">{c.text}</span>
+                <span className="text-gray-400"> ({c.votes} votes)</span>
+                {!post.started && !post.completed && token && currentUser && currentUser !== post.author && currentUser !== c.commenter && (
                   votedFor === null ? (
-                    <button
-                      onClick={() => handleVote(c.commenter)}
-                      className="ml-4 text-sm bg-[#7FAF92] text-[#E8E5DC] px-2 py-1 rounded hover:bg-[#5D749B]"
-                    >
+                    <button onClick={() => handleVote(c.commenter)} className="ml-4 text-sm bg-[#7FAF92] text-[#E8E5DC] px-2 py-1 rounded hover:bg-[#5D749B]">
                       Vote
                     </button>
                   ) : votedFor === c.commenter ? (
                     <>
                       <span className="ml-4 text-green-400">🗳️ You voted</span>
-                      <button
-                        onClick={handleUnvote}
-                        className="ml-2 text-sm text-white bg-red-600 px-2 py-1 rounded hover:bg-red-800"
-                      >
+                      <button onClick={handleUnvote} className="ml-2 text-sm text-white bg-[#a32303] px-2 py-1 rounded hover:bg-[#a32303]">
                         Unvote
                       </button>
                     </>
@@ -241,9 +222,11 @@ export default function PostDetail() {
             ))}
           </ul>
         )}
-        {token && currentUser && currentUser !== post.author && !post.started && !post.completed && (
+
+        {/* Comment Form or Messages */}
+        {!post.started && !post.completed && token && currentUser && currentUser !== post.author && (
           alreadyCommented ? (
-            <p className="mt-6 italic text-yellow-400 text-center">💬 You already commented on this post.</p>
+            <p className="mt-6 italic text-yellow-400">💬 You already commented on this post.</p>
           ) : (
             <form onSubmit={handleCommentSubmit} className="mt-6">
               <h4 className="mb-2 text-[#5D749B] font-semibold">Leave a comment</h4>
@@ -254,26 +237,27 @@ export default function PostDetail() {
                 className="w-full p-2 border rounded bg-[#16221C] text-[#E8E5DC]"
                 placeholder="Write your comment..."
               />
-              <button
-                type="submit"
-                className="mt-2 bg-[#7FAF92] text-[#E8E5DC] px-4 py-2 rounded hover:bg-[#5D749B]"
-              >
+              <button type="submit" className="mt-2 bg-[#7FAF92] text-[#E8E5DC] px-4 py-2 rounded hover:bg-[#5D749B]">
                 Submit
               </button>
             </form>
           )
         )}
-        {token && !post.completed && currentUser && currentUser !== post.author && post.started && (
+
+        {!post.started && !post.completed && token && currentUser === post.author && (
+          <p className="mt-6 italic text-red-400">You cannot comment on your own post.</p>
+        )}
+
+        {post.started && !post.completed && token && currentUser !== post.author && (
           <p className="mt-6 italic text-yellow-400">🥊 Duel in progress. You can no longer comment.</p>
         )}
 
-        {token && !post.completed && currentUser === post.author && (
-          <p className="mt-6 text-gray-400 italic">You cannot comment on your own post.</p>
+        {post.completed && (
+          <p className="text-yellow-400 mt-6 italic text-center">
+            🤝 Hands shaken by both! The duel is now complete. No more comments, likes or flags allowed.
+          </p>
         )}
       </div>
-       {post.completed && (
-          <p className="text-yellow-400 mt-6 italic text-center">⚔️ This duel has ended. No more comments, likes or flags allowed.</p>
-        )}
     </PageContainer>
   );
 }
